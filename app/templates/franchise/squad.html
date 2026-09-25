@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}My Squad Roster — {{ franchise.name }}{% endblock %}
+
+{% block content_wrapper %}
+<div class="container py-3">
+    <!-- Team Header Bar & Sub-Navigation -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary text-uppercase fs-6 px-3 py-2">{{ franchise.short_name }}</span>
+            <div>
+                <h2 class="fw-bold text-white mb-0">{{ franchise.name }} Squad Roster</h2>
+                <small class="text-muted">Purchased players and squad composition analytics</small>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('live.auction_live') }}" target="_blank" class="btn btn-outline-info btn-sm">
+                <i class="fa-solid fa-tv me-1"></i> Live Projector
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
+                <i class="fa-solid fa-right-from-bracket me-1"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Sub-Navigation Links Bar -->
+    <div class="spl-card p-2 mb-4">
+        <div class="nav nav-pills gap-1">
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.dashboard') }}"><i class="fa-solid fa-chart-pie me-1"></i> Dashboard</a>
+            <a class="nav-link active bg-cyan text-dark fw-bold px-3 py-1.5" href="{{ url_for('franchise.squad') }}"><i class="fa-solid fa-users me-1"></i> My Squad</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.purchases') }}"><i class="fa-solid fa-cart-shopping me-1"></i> Purchases</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.bids') }}"><i class="fa-solid fa-list-check me-1"></i> Bid History</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.activity') }}"><i class="fa-solid fa-timeline me-1"></i> Activity</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.profile') }}"><i class="fa-solid fa-id-card me-1"></i> Profile</a>
+        </div>
+    </div>
+
+    <!-- Analytics Stat Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="spl-card text-center">
+                <small class="text-muted fw-semibold">SQUAD COUNT</small>
+                <h3 class="fw-bold text-cyan mb-0">{{ players | length }} / {{ franchise.squad_limit }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="spl-card text-center">
+                <small class="text-muted fw-semibold">AVG PLAYER COST</small>
+                <h3 class="fw-bold text-white mb-0">{{ avg_price | currency }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="spl-card text-center">
+                <small class="text-muted fw-semibold">HIGHEST PURCHASE</small>
+                <h3 class="fw-bold text-gold mb-0">{{ highest_purchase | currency }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="spl-card text-center">
+                <small class="text-muted fw-semibold">LOWEST PURCHASE</small>
+                <h3 class="fw-bold text-info mb-0">{{ lowest_purchase | currency }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Composition & Spending Breakdown -->
+    <div class="row g-4 mb-4">
+        <!-- Role Counts -->
+        <div class="col-md-6">
+            <div class="spl-card h-100">
+                <div class="spl-card-header">
+                    <h5 class="fw-semibold text-white mb-0"><i class="fa-solid fa-chart-bar text-cyan me-2"></i>Role Composition</h5>
+                </div>
+                <div class="row g-2 text-center">
+                    <div class="col-6 col-sm-3">
+                        <div class="p-2 bg-dark rounded border border-secondary">
+                            <small class="text-muted d-block">BATSMEN</small>
+                            <span class="fs-4 fw-bold text-cyan">{{ role_counts['BATSMAN'] }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-sm-3">
+                        <div class="p-2 bg-dark rounded border border-secondary">
+                            <small class="text-muted d-block">BOWLERS</small>
+                            <span class="fs-4 fw-bold text-cyan">{{ role_counts['BOWLER'] }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-sm-3">
+                        <div class="p-2 bg-dark rounded border border-secondary">
+                            <small class="text-muted d-block">ALL-ROUND</small>
+                            <span class="fs-4 fw-bold text-cyan">{{ role_counts['ALL_ROUNDER'] }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-sm-3">
+                        <div class="p-2 bg-dark rounded border border-secondary">
+                            <small class="text-muted d-block">KEEPERS</small>
+                            <span class="fs-4 fw-bold text-cyan">{{ role_counts['WICKETKEEPER'] }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role Spending Breakdown -->
+        <div class="col-md-6">
+            <div class="spl-card h-100">
+                <div class="spl-card-header">
+                    <h5 class="fw-semibold text-white mb-0"><i class="fa-solid fa-wallet text-gold me-2"></i>Spending by Role</h5>
+                </div>
+                <div class="small">
+                    {% for role_name, amount in role_spending.items() %}
+                    <div class="d-flex justify-content-between text-muted mb-1">
+                        <span>{{ role_name }}:</span>
+                        <strong class="text-gold">{{ amount | currency }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter/Sort Bar & Squad Player Cards -->
+    <div class="spl-card p-3 mb-4">
+        <form method="GET" action="{{ url_for('franchise.squad') }}" class="d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold text-white mb-0">Player Roster ({{ players | length }})</h5>
+            <div class="d-flex align-items-center gap-2">
+                <label class="text-muted small fw-semibold">Sort By:</label>
+                <select name="sort_by" class="form-select form-select-spl form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                    <option value="latest" {% if sort_by == 'latest' %}selected{% endif %}>Latest Purchase</option>
+                    <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                    <option value="price_low" {% if sort_by == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Player Name</option>
+                    <option value="role" {% if sort_by == 'role' %}selected{% endif %}>Role</option>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Player Cards Grid -->
+    {% if players %}
+    <div class="row g-4">
+        {% for p in players %}
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="spl-card text-center h-100 position-relative">
+                <div class="mb-3">
+                    {% if p.photo and p.photo.startswith('http') %}
+                        <img src="{{ p.photo }}" alt="{{ p.name }}" class="rounded-circle border border-cyan shadow" width="85" height="85" style="object-fit:cover;">
+                    {% elif p.photo %}
+                        <img src="{{ url_for('static', filename='uploads/' + p.photo) }}" alt="{{ p.name }}" class="rounded-circle border border-cyan shadow" width="85" height="85" style="object-fit:cover;" onerror="this.src='https://via.placeholder.com/85?text=SPL'">
+                    {% else %}
+                        <img src="https://via.placeholder.com/85?text=SPL" class="rounded-circle border border-cyan shadow">
+                    {% endif %}
+                </div>
+                <h5 class="fw-bold text-white mb-1">{{ p.name }}</h5>
+                <div class="text-cyan fw-semibold small mb-2">#{{ p.roll_number }}</div>
+
+                <div class="d-flex justify-content-center gap-1 mb-3">
+                    <span class="badge badge-role">{{ p.role }}</span>
+                    <span class="badge badge-category">{{ p.category }}</span>
+                </div>
+
+                <div class="p-2 bg-dark rounded border border-secondary mb-2">
+                    <small class="text-muted d-block">PURCHASE PRICE</small>
+                    <span class="fs-5 fw-bold text-gold">{{ p.sold_price | currency }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="spl-card text-center py-5">
+        <i class="fa-solid fa-users-slash text-muted fa-3x mb-3"></i>
+        <h5 class="text-white">YOUR SQUAD IS EMPTY</h5>
+        <p class="text-muted small mb-0">Players acquired during live bidding will automatically appear in your team roster.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

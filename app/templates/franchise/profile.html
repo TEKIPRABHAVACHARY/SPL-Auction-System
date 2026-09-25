@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Team Profile — {{ franchise.name }}{% endblock %}
+
+{% block content_wrapper %}
+<div class="container py-3">
+    <!-- Header Bar & Sub-Navigation -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary text-uppercase fs-6 px-3 py-2">{{ franchise.short_name }}</span>
+            <div>
+                <h2 class="fw-bold text-white mb-0">{{ franchise.name }} Profile</h2>
+                <small class="text-muted">Authenticated identity and team allocations</small>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('live.auction_live') }}" target="_blank" class="btn btn-outline-info btn-sm">
+                <i class="fa-solid fa-tv me-1"></i> Live Projector
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
+                <i class="fa-solid fa-right-from-bracket me-1"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Sub-Navigation Links Bar -->
+    <div class="spl-card p-2 mb-4">
+        <div class="nav nav-pills gap-1">
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.dashboard') }}"><i class="fa-solid fa-chart-pie me-1"></i> Dashboard</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.squad') }}"><i class="fa-solid fa-users me-1"></i> My Squad</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.purchases') }}"><i class="fa-solid fa-cart-shopping me-1"></i> Purchases</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.bids') }}"><i class="fa-solid fa-list-check me-1"></i> Bid History</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.activity') }}"><i class="fa-solid fa-timeline me-1"></i> Activity</a>
+            <a class="nav-link active bg-cyan text-dark fw-bold px-3 py-1.5" href="{{ url_for('franchise.profile') }}"><i class="fa-solid fa-id-card me-1"></i> Profile</a>
+        </div>
+    </div>
+
+    <!-- Profile Details Card -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="spl-card">
+                <div class="spl-card-header d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-id-badge text-cyan me-2"></i>Franchise Account Specifications</h5>
+                    <span class="badge bg-success">AUTHENTICATED OAUTH</span>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="p-3 bg-dark border border-secondary rounded">
+                            <small class="text-muted d-block fw-semibold mb-1">AUTHENTICATED GOOGLE NAME</small>
+                            <span class="fs-5 fw-bold text-white"><i class="fa-solid fa-user me-2 text-cyan"></i>{{ current_user.display_name or 'Franchise Representative' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 bg-dark border border-secondary rounded">
+                            <small class="text-muted d-block fw-semibold mb-1">VERIFIED GMAIL ADDRESS</small>
+                            <span class="fs-6 fw-semibold text-cyan"><i class="fa-brands fa-google text-danger me-2"></i>{{ current_user.email or franchise.authorized_email }}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 bg-dark border border-secondary rounded">
+                            <small class="text-muted d-block fw-semibold mb-1">FRANCHISE NAME</small>
+                            <span class="fs-5 fw-bold text-white">{{ franchise.name }} ({{ franchise.short_name }})</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 bg-dark border border-secondary rounded">
+                            <small class="text-muted d-block fw-semibold mb-1">STARTING PURSE ALLOCATION</small>
+                            <span class="fs-5 fw-bold text-gold">{{ franchise.starting_purse | currency }}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 bg-dark border border-secondary rounded">
+                            <small class="text-muted d-block fw-semibold mb-1">MAXIMUM SQUAD LIMIT</small>
+                            <span class="fs-5 fw-bold text-info">{{ franchise.squad_limit }} Players</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 bg-dark border border-secondary rounded">
+                            <small class="text-muted d-block fw-semibold mb-1">LAST LOGIN TIMESTAMP</small>
+                            <span class="text-muted small">{{ current_user.last_login_at.strftime('%Y-%m-%d %H:%M:%S') if current_user.last_login_at else 'Active Session' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 border border-secondary rounded bg-dark text-muted small">
+                    <i class="fa-solid fa-lock me-2 text-warning"></i>
+                    <strong>Administrative Control Notice:</strong> Franchise configuration parameters (Purse allocations, squad limits, team names, and authorized emails) can only be modified by the SPL System Administrator.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

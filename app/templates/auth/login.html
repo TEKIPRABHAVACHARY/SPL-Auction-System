@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Login — {{ event_name }} Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-center py-4">
+    <div class="w-100" style="max-width: 450px;">
+        <div class="text-center mb-4">
+            <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle bg-dark text-cyan mb-3 shadow">
+                <i class="fa-solid fa-gavel fa-2x"></i>
+            </div>
+            <h1 class="fw-extrabold tracking-wide text-cyan mb-1">{{ event_name }} PORTAL</h1>
+            <p class="text-muted small mb-0">{{ event_subtitle }}</p>
+        </div>
+
+        <div class="spl-card p-4 p-md-5 border-cyan shadow-lg">
+            <h5 class="fw-bold text-cyan mb-3 text-center"><i class="fa-solid fa-lock me-2"></i>Sign In to SPL</h5>
+
+            <!-- Franchise Owner Google OAuth Login Button -->
+            <div class="mb-4 text-center">
+                <a href="{{ url_for('auth.google_login') }}" class="btn btn-outline-light w-100 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 border-secondary shadow-sm hover-border-cyan">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.28-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                    </svg>
+                    <span>Continue with Google</span>
+                </a>
+                <small class="text-muted d-block mt-2 fs-8"><i class="fa-solid fa-shield-halved me-1 text-cyan"></i>For Authorized Franchise Owners</small>
+            </div>
+
+            <div class="my-4 text-center position-relative">
+                <hr class="border-secondary my-0">
+                <span class="position-absolute top-50 start-50 translate-middle bg-dark px-3 text-muted small fw-semibold">OR ADMIN LOGIN</span>
+            </div>
+
+            <!-- Standard Username / Password Login Form -->
+            <form method="POST" action="{{ url_for('auth.login') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label for="login_id" class="form-label text-muted small fw-semibold">ADMIN USERNAME OR CODE</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" class="form-control form-control-spl" id="login_id" name="login_id" placeholder="admin or franchise code" autocomplete="username" required>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="password" class="form-label text-muted small fw-semibold">PASSWORD</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-key"></i></span>
+                        <input type="password" class="form-control form-control-spl" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-spl-primary w-100 py-2.5 fw-bold shadow">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i>SIGN IN
+                </button>
+            </form>
+
+            <div class="d-flex justify-content-between align-items-center mt-4 border-top border-secondary pt-3">
+                <a href="{{ url_for('public.public_teams') }}" class="text-muted small text-decoration-none">
+                    <i class="fa-solid fa-users me-1 text-cyan"></i> Public Teams
+                </a>
+                <a href="{{ url_for('live.auction_live') }}" class="text-muted small text-decoration-none" target="_blank">
+                    <i class="fa-solid fa-tv me-1 text-warning"></i> Live Screen 16:9
+                </a>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <small class="text-muted">&copy; 2026 Sphoorthy Engineering College. All rights reserved.</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs Platform — {{ event_name }} Admin{% endblock %}
+
+{% block content_wrapper %}
+<div class="d-flex flex-column flex-lg-row">
+    <!-- Sidebar Navigation -->
+    <div class="spl-sidebar">
+        <div class="spl-brand">
+            <i class="fa-solid fa-gavel text-cyan me-2"></i>{{ event_name }} <span class="spl-accent">ADMIN</span>
+        </div>
+        <div class="spl-nav">
+            <a href="{{ url_for('admin.dashboard') }}" class="spl-nav-item">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.players') }}" class="spl-nav-item">
+                <i class="fa-solid fa-users"></i> Players
+            </a>
+            <a href="{{ url_for('admin.franchises') }}" class="spl-nav-item">
+                <i class="fa-solid fa-shield-halved"></i> Franchises
+            </a>
+            <a href="{{ url_for('admin.auction_control') }}" class="spl-nav-item">
+                <i class="fa-solid fa-gavel"></i> Primary Auction
+            </a>
+            <a href="{{ url_for('admin.unsold_players') }}" class="spl-nav-item">
+                <i class="fa-solid fa-user-slash"></i> Unsold Players
+            </a>
+            <a href="{{ url_for('admin.second_chance_dashboard') }}" class="spl-nav-item">
+                <i class="fa-solid fa-rotate-right"></i> Second Chance
+            </a>
+            <a href="{{ url_for('admin.final_squads') }}" class="spl-nav-item">
+                <i class="fa-solid fa-people-group"></i> Final Squads
+            </a>
+            <a href="{{ url_for('admin.fixtures_management') }}" class="spl-nav-item">
+                <i class="fa-solid fa-calendar-days"></i> Fixtures
+            </a>
+            <a href="{{ url_for('admin.audit_logs') }}" class="spl-nav-item active">
+                <i class="fa-solid fa-clipboard-list"></i> Audit Logs
+            </a>
+            <a href="{{ url_for('admin.users_management') }}" class="spl-nav-item">
+                <i class="fa-solid fa-user-gear"></i> Users & Security
+            </a>
+            <a href="{{ url_for('admin.system_health_dashboard') }}" class="spl-nav-item">
+                <i class="fa-solid fa-heart-pulse"></i> System Health
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="spl-nav-item">
+                <i class="fa-solid fa-gears"></i> Settings
+            </a>
+        </div>
+        <div class="p-3 border-top border-secondary">
+            <a href="{{ url_for('auth.logout') }}" class="spl-nav-item text-danger p-0">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="spl-content flex-grow-1">
+        <!-- Header Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
+            <div>
+                <h2 class="fw-bold text-white mb-0"><i class="fa-solid fa-clipboard-list text-cyan me-2"></i>Admin Audit Log Platform</h2>
+                <small class="text-muted">Real-time inspection of security events, Google OAuth logins, auction transactions & admin operations</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-secondary px-3 py-2 fs-6">
+                    <i class="fa-solid fa-lock me-1"></i> Append-Only Immutable Records
+                </span>
+            </div>
+        </div>
+
+        <!-- Audit Summary Cards Grid -->
+        <div class="row g-3 mb-4">
+            <!-- Total Events -->
+            <div class="col-md-6 col-xl">
+                <div class="spl-card h-100 p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted small fw-bold">TOTAL EVENTS</span>
+                        <div class="p-2 rounded bg-dark text-cyan"><i class="fa-solid fa-list"></i></div>
+                    </div>
+                    <h3 class="fw-bold text-white mb-0">{{ total_events }}</h3>
+                    <small class="text-muted fs-7">All recorded system actions</small>
+                </div>
+            </div>
+
+            <!-- Login Events -->
+            <div class="col-md-6 col-xl">
+                <div class="spl-card h-100 p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted small fw-bold">LOGIN EVENTS</span>
+                        <div class="p-2 rounded bg-dark text-info"><i class="fa-solid fa-right-to-bracket"></i></div>
+                    </div>
+                    <h3 class="fw-bold text-info mb-0">{{ login_events }}</h3>
+                    <small class="text-muted fs-7">Admin & Google OAuth logins</small>
+                </div>
+            </div>
+
+            <!-- Auction Events -->
+            <div class="col-md-6 col-xl">
+                <div class="spl-card h-100 p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted small fw-bold">AUCTION EVENTS</span>
+                        <div class="p-2 rounded bg-dark text-warning"><i class="fa-solid fa-gavel"></i></div>
+                    </div>
+                    <h3 class="fw-bold text-warning mb-0">{{ auction_events }}</h3>
+                    <small class="text-muted fs-7">Bids, sales & status changes</small>
+                </div>
+            </div>
+
+            <!-- Admin Actions -->
+            <div class="col-md-6 col-xl">
+                <div class="spl-card h-100 p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted small fw-bold">ADMIN ACTIONS</span>
+                        <div class="p-2 rounded bg-dark text-primary"><i class="fa-solid fa-user-shield"></i></div>
+                    </div>
+                    <h3 class="fw-bold text-primary mb-0">{{ admin_actions_count }}</h3>
+                    <small class="text-muted fs-7">Administrative edits</small>
+                </div>
+            </div>
+
+            <!-- Security Events -->
+            <div class="col-md-6 col-xl">
+                <div class="spl-card h-100 p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted small fw-bold">SECURITY EVENTS</span>
+                        <div class="p-2 rounded bg-dark text-danger"><i class="fa-solid fa-shield-virus"></i></div>
+                    </div>
+                    <h3 class="fw-bold text-danger mb-0">{{ security_events }}</h3>
+                    <small class="text-muted fs-7">Failures, unauthorized attempts</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Controls Card -->
+        <div class="spl-card mb-4 p-3">
+            <form method="GET" action="{{ url_for('admin.audit_logs') }}" class="row g-3 align-items-end">
+                <!-- Search Query -->
+                <div class="col-md-4 col-lg-3">
+                    <label class="form-label small text-muted fw-semibold">Search Keywords</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-dark border-secondary text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" name="search" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Action, IP, details..." value="{{ search }}">
+                    </div>
+                </div>
+
+                <!-- Action Filter -->
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label small text-muted fw-semibold">Event Type / Action</label>
+                    <select name="action" class="form-select form-select-sm bg-dark text-white border-secondary">
+                        <option value="">All Actions</option>
+                        {% for act in action_options %}
+                        <option value="{{ act }}" {% if selected_action == act %}selected{% endif %}>{{ act }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label small text-muted fw-semibold">Status</label>
+                    <select name="status" class="form-select form-select-sm bg-dark text-white border-secondary">
+                        <option value="">All Statuses</option>
+                        <option value="SUCCESS" {% if selected_status == 'SUCCESS' %}selected{% endif %}>SUCCESS</option>
+                        <option value="FAILED" {% if selected_status == 'FAILED' %}selected{% endif %}>FAILED</option>
+                        <option value="DENIED" {% if selected_status == 'DENIED' %}selected{% endif %}>DENIED</option>
+                    </select>
+                </div>
+
+                <!-- Franchise Filter -->
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label small text-muted fw-semibold">Franchise</label>
+                    <select name="franchise_id" class="form-select form-select-sm bg-dark text-white border-secondary">
+                        <option value="">All Franchises</option>
+                        {% for f in franchises %}
+                        <option value="{{ f.id }}" {% if selected_franchise == f.id|string %}selected{% endif %}>{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Date From / To -->
+                <div class="col-md-3 col-lg-3">
+                    <label class="form-label small text-muted fw-semibold">Date Range</label>
+                    <div class="d-flex gap-1">
+                        <input type="date" name="date_from" class="form-control form-control-sm bg-dark text-white border-secondary" value="{{ date_from }}">
+                        <input type="date" name="date_to" class="form-control form-control-sm bg-dark text-white border-secondary" value="{{ date_to }}">
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="col-12 d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-outline-secondary btn-sm">Reset Filters</a>
+                    <button type="submit" class="btn btn-spl-primary btn-sm"><i class="fa-solid fa-filter me-1"></i> Apply Filter</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Audit Log Table Card -->
+        <div class="spl-card p-0 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle mb-0">
+                    <thead class="bg-dark text-cyan small text-uppercase">
+                        <tr>
+                            <th class="ps-3 py-3">Timestamp</th>
+                            <th class="py-3">Actor / User</th>
+                            <th class="py-3">Role</th>
+                            <th class="py-3">Action</th>
+                            <th class="py-3">Target</th>
+                            <th class="py-3">Franchise</th>
+                            <th class="py-3">IP Address</th>
+                            <th class="py-3">Status</th>
+                            <th class="pe-3 py-3">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-secondary">
+                        {% for log in logs %}
+                        <tr>
+                            <td class="ps-3 text-nowrap text-muted small">
+                                <i class="fa-regular fa-clock me-1 text-cyan"></i>
+                                {{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                            </td>
+                            <td>
+                                {% if log.admin %}
+                                    <span class="fw-semibold text-white">{{ log.admin.display_name or log.admin.username }}</span>
+                                {% elif log.franchise %}
+                                    <span class="fw-semibold text-warning">{{ log.franchise.name }} Owner</span>
+                                {% else %}
+                                    <span class="text-muted italic">System / Visitor</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.admin and log.admin.is_admin %}
+                                    <span class="badge bg-primary text-uppercase fs-8">ADMIN</span>
+                                {% elif log.franchise %}
+                                    <span class="badge bg-warning text-dark text-uppercase fs-8">FRANCHISE</span>
+                                {% else %}
+                                    <span class="badge bg-secondary text-uppercase fs-8">SYSTEM</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code class="text-cyan fw-bold">{{ log.action }}</code>
+                            </td>
+                            <td class="small text-light">
+                                {% if log.target_type %}
+                                    {{ log.target_type }}{% if log.target_id %} #{{ log.target_id }}{% endif %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if log.franchise %}
+                                    <span class="badge bg-dark border border-secondary text-warning">
+                                        <i class="fa-solid fa-shield-halved me-1"></i>{{ log.franchise.short_name }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted font-monospace">
+                                {{ log.ip_address or '127.0.0.1' }}
+                            </td>
+                            <td>
+                                {% if log.status == 'SUCCESS' %}
+                                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                        <i class="fa-solid fa-check me-1"></i>SUCCESS
+                                    </span>
+                                {% elif log.status == 'DENIED' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
+                                        <i class="fa-solid fa-ban me-1"></i>DENIED
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1">
+                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>{{ log.status }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-3 small text-muted text-truncate max-w-xs" title="Old: {{ log.old_value }} | New: {{ log.new_value }}">
+                                {% if log.new_value %}
+                                    <span class="text-light">{{ log.new_value }}</span>
+                                {% elif log.old_value %}
+                                    <span class="text-muted">Prev: {{ log.old_value }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-folder-open fs-2 mb-2 d-block text-secondary"></i>
+                                No audit log records match the selected filter criteria.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

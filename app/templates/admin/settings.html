@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings — {{ event_name }}{% endblock %}
+
+{% block content_wrapper %}
+<div class="d-flex flex-column flex-lg-row">
+    <!-- Sidebar Navigation -->
+    <div class="spl-sidebar">
+        <div class="spl-brand">
+            <i class="fa-solid fa-gavel text-cyan me-2"></i>{{ event_name }} <span class="spl-accent">ADMIN</span>
+        </div>
+        <div class="spl-nav">
+            <a href="{{ url_for('admin.dashboard') }}" class="spl-nav-item">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.players') }}" class="spl-nav-item">
+                <i class="fa-solid fa-users"></i> Players
+            </a>
+            <a href="{{ url_for('admin.franchises') }}" class="spl-nav-item">
+                <i class="fa-solid fa-shield-halved"></i> Franchises
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="spl-nav-item active">
+                <i class="fa-solid fa-gears"></i> Settings
+            </a>
+        </div>
+        <div class="p-3 border-top border-secondary">
+            <a href="{{ url_for('auth.logout') }}" class="spl-nav-item text-danger p-0">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="spl-content flex-grow-1">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
+            <div>
+                <h2 class="fw-bold text-white mb-0">System Configuration</h2>
+                <small class="text-muted">Global auction defaults and system parameters</small>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Settings Form -->
+            <div class="col-lg-7">
+                <div class="spl-card">
+                    <div class="spl-card-header">
+                        <h5 class="fw-semibold text-white mb-0"><i class="fa-solid fa-sliders text-cyan me-2"></i>Global Auction Defaults</h5>
+                    </div>
+                    <form method="POST" action="{{ url_for('admin.settings') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">EVENT BRANDING NAME</label>
+                                <input type="text" class="form-control form-control-spl" name="event_name" value="{{ event_name }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">EVENT FULL SUBTITLE</label>
+                                <input type="text" class="form-control form-control-spl" name="event_subtitle" value="{{ event_subtitle }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">DEFAULT STARTING PURSE (₹)</label>
+                                <input type="number" class="form-control form-control-spl" name="starting_purse" value="{{ starting_purse }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">DEFAULT SQUAD LIMIT</label>
+                                <input type="number" class="form-control form-control-spl" name="squad_limit" value="{{ squad_limit }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">DEFAULT PLAYER BASE PRICE (₹)</label>
+                                <input type="number" class="form-control form-control-spl" name="base_price" value="{{ base_price }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-semibold">AUCTION TIMER (SECONDS)</label>
+                                <input type="number" class="form-control form-control-spl" name="timer_seconds" value="{{ timer_seconds }}" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-muted small fw-semibold">DEFAULT APPLICATION THEME</label>
+                                <select class="form-select form-select-spl" name="theme_default">
+                                    <option value="dark" {% if theme_default == 'dark' %}selected{% endif %}>🌙 Dark Theme (Default)</option>
+                                    <option value="light" {% if theme_default == 'light' %}selected{% endif %}>☀ Light Theme</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="show_price_switch" name="show_purchase_price_publicly" value="true" {% if show_purchase_price_publicly == 'true' %}checked{% endif %}>
+                                    <label class="form-check-label text-light small fw-bold" for="show_price_switch">
+                                        Show Player Purchase Prices Publicly on /teams Portal
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Captain & Vice Captain Selection -->
+                            {% if franchises %}
+                            <div class="col-12 mt-3 pt-3 border-top border-secondary">
+                                <h6 class="fw-bold text-cyan mb-2"><i class="fa-solid fa-crown text-warning me-2"></i>Franchise Captain & Vice-Captain Assignments</h6>
+                                {% for f in franchises %}
+                                <div class="row g-2 mb-2 align-items-center bg-dark p-2 rounded border border-secondary">
+                                    <div class="col-md-4"><strong class="text-cyan small">{{ f.name }}</strong></div>
+                                    <div class="col-md-4">
+                                        <select name="captain_{{ f.id }}" class="form-select form-select-sm bg-dark text-light border-secondary">
+                                            <option value="">Captain: TBD</option>
+                                            {% for p in f.sold_players %}
+                                            <option value="{{ p.id }}" {% if f.captain_id == p.id %}selected{% endif %}>C: {{ p.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select name="vice_captain_{{ f.id }}" class="form-select form-select-sm bg-dark text-light border-secondary">
+                                            <option value="">Vice-Captain: TBD</option>
+                                            {% for p in f.sold_players %}
+                                            <option value="{{ p.id }}" {% if f.vice_captain_id == p.id %}selected{% endif %}>VC: {{ p.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-4 pt-3 border-top border-secondary text-end">
+                            <button type="submit" class="btn btn-spl-primary" data-loading-text="Saving Settings...">
+                                <i class="fa-solid fa-floppy-disk me-1"></i> Save Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Recent System Audit Log -->
+            <div class="col-lg-5">
+                <div class="spl-card h-100">
+                    <div class="spl-card-header d-flex justify-content-between align-items-center">
+                        <h5 class="fw-semibold text-white mb-0"><i class="fa-solid fa-list-check text-warning me-2"></i>Audit Log Activity</h5>
+                        <span class="badge bg-secondary">Recent Actions</span>
+                    </div>
+
+                    {% if audit_logs %}
+                    <div class="list-group list-group-flush bg-transparent">
+                        {% for log in audit_logs %}
+                        <div class="list-group-item bg-transparent border-secondary text-muted px-0 py-2.5">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="text-white small"><i class="fa-solid fa-user-gear text-cyan me-1"></i>{{ log.action }}</strong>
+                                <small class="text-muted" style="font-size: 0.75rem;">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                            {% if log.target_type %}
+                            <div class="small text-truncate text-cyan">{{ log.target_type }} {% if log.target_id %}#{{ log.target_id }}{% endif %}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted small">
+                        <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 d-block"></i> No recent audit records found.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

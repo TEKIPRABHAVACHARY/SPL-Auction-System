@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Bid Log History — {{ franchise.name }}{% endblock %}
+
+{% block content_wrapper %}
+<div class="container py-3">
+    <!-- Header Bar & Sub-Navigation -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary text-uppercase fs-6 px-3 py-2">{{ franchise.short_name }}</span>
+            <div>
+                <h2 class="fw-bold text-white mb-0">Franchise Bid History</h2>
+                <small class="text-muted">Personal audit log of all submitted auction bids</small>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('live.auction_live') }}" target="_blank" class="btn btn-outline-info btn-sm">
+                <i class="fa-solid fa-tv me-1"></i> Live Projector
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
+                <i class="fa-solid fa-right-from-bracket me-1"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Sub-Navigation Links Bar -->
+    <div class="spl-card p-2 mb-4">
+        <div class="nav nav-pills gap-1">
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.dashboard') }}"><i class="fa-solid fa-chart-pie me-1"></i> Dashboard</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.squad') }}"><i class="fa-solid fa-users me-1"></i> My Squad</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.purchases') }}"><i class="fa-solid fa-cart-shopping me-1"></i> Purchases</a>
+            <a class="nav-link active bg-cyan text-dark fw-bold px-3 py-1.5" href="{{ url_for('franchise.bids') }}"><i class="fa-solid fa-list-check me-1"></i> Bid History</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.activity') }}"><i class="fa-solid fa-timeline me-1"></i> Activity</a>
+            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.profile') }}"><i class="fa-solid fa-id-card me-1"></i> Profile</a>
+        </div>
+    </div>
+
+    <!-- Bid Log Table -->
+    <div class="spl-card p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-spl mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Time</th>
+                        <th>Player Name</th>
+                        <th>Roll No</th>
+                        <th>Submitted Bid</th>
+                        <th class="text-end pe-3">Result Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if bids %}
+                        {% for b in bids %}
+                        <tr>
+                            <td class="ps-3 text-muted small">{{ b.created_at.strftime('%H:%M:%S (%Y-%m-%d)') }}</td>
+                            <td class="fw-semibold text-white">{{ b.player.name if b.player else 'N/A' }}</td>
+                            <td class="text-cyan fw-semibold">{{ b.player.roll_number if b.player else 'N/A' }}</td>
+                            <td class="text-gold fw-bold">{{ b.amount | currency }}</td>
+                            <td class="text-end pe-3">
+                                {% if b.status == 'WINNING' %}
+                                    <span class="badge bg-success px-3 py-1.5"><i class="fa-solid fa-trophy me-1"></i> WINNING</span>
+                                {% elif b.status == 'SOLD' %}
+                                    <span class="badge bg-primary px-3 py-1.5"><i class="fa-solid fa-circle-check me-1"></i> WON</span>
+                                {% elif b.status == 'UNSOLD' %}
+                                    <span class="badge bg-secondary px-3 py-1.5">UNSOLD</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark px-3 py-1.5"><i class="fa-solid fa-arrow-up me-1"></i> OUTBID</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="fa-solid fa-gavel text-muted fa-3x mb-3"></i>
+                                <h6 class="text-white">NO BID ACTIVITY YET</h6>
+                                <p class="text-muted small mb-0">Bids submitted during live bidding sessions will be recorded in this personal log.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

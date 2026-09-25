@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Final Auction Summary & Reports — {{ event_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-cyan mb-1"><i class="fa-solid fa-chart-pie me-2"></i>Final Auction Summary & Report</h2>
+        <p class="text-muted small mb-0">Comprehensive financial and statistical breakdown of the SPL auction.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.download_auction_report') }}" class="btn btn-success fw-bold">
+            <i class="fa-solid fa-file-csv me-2"></i>DOWNLOAD CSV REPORT
+        </a>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Summary Metric Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="spl-card text-center py-3 border-start border-cyan border-4">
+            <span class="text-muted text-uppercase extra-small fw-bold">Registered</span>
+            <h3 class="fw-bold text-light mb-0 mt-1">{{ total_registered }}</h3>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="spl-card text-center py-3 border-start border-success border-4">
+            <span class="text-muted text-uppercase extra-small fw-bold">Total Sold</span>
+            <h3 class="fw-bold text-success mb-0 mt-1">{{ total_sold }}</h3>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="spl-card text-center py-3 border-start border-info border-4">
+            <span class="text-muted text-uppercase extra-small fw-bold">2nd Chance Sold</span>
+            <h3 class="fw-bold text-info mb-0 mt-1">{{ second_chance_sold }}</h3>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="spl-card text-center py-3 border-start border-danger border-4">
+            <span class="text-muted text-uppercase extra-small fw-bold">Final Unsold</span>
+            <h3 class="fw-bold text-danger mb-0 mt-1">{{ final_unsold }}</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="spl-card text-center py-3 border-start border-warning border-4">
+            <span class="text-muted text-uppercase extra-small fw-bold">Total Virtual Money Spent</span>
+            <h3 class="fw-bold text-warning mb-0 mt-1">Rs. {{ total_money_spent | currency }}</h3>
+        </div>
+    </div>
+</div>
+
+<!-- Franchise Financial Breakdown -->
+<div class="spl-card mb-4">
+    <h5 class="fw-bold text-cyan mb-3"><i class="fa-solid fa-building me-2"></i>Franchise Spending Summary</h5>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0">
+            <thead class="border-bottom border-secondary text-cyan">
+                <tr>
+                    <th>Franchise Name</th>
+                    <th>Code</th>
+                    <th>Squad Count</th>
+                    <th>Total Spent</th>
+                    <th>Remaining Purse</th>
+                    <th>Highest Purchase</th>
+                    <th>Lowest Purchase</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in franchise_summaries %}
+                {% set f = item.franchise %}
+                <tr>
+                    <td class="fw-bold">{{ f.name }}</td>
+                    <td><span class="badge bg-secondary">{{ f.short_name }}</span></td>
+                    <td><span class="badge bg-dark border border-secondary text-cyan">{{ item.squad_count }} / {{ f.squad_limit }}</span></td>
+                    <td class="text-warning fw-bold">Rs. {{ item.spent | currency }}</td>
+                    <td class="text-success fw-bold">Rs. {{ item.remaining | currency }}</td>
+                    <td>Rs. {{ item.highest_purchase | currency }}</td>
+                    <td>Rs. {{ item.lowest_purchase | currency }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

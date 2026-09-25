@@ -1,0 +1,163 @@
+from datetime import datetime
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask_login import login_user, logout_user, login_required, current_user
+from app.extensions import db
+from app.models import User, Franchise
+from app.services.audit_service import log_audit
+from app.services.oauth_service import oauth
+
+auth_bp = Blueprint('auth', __name__)
+
+@auth_bp.route('/login', methods=['GET', 'POST'])
+@auth_bp.route('/auth/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated and request.method == 'GET':
+        if current_user.is_admin:
+            return redirect(url_for('admin.dashboard'))
+        return redirect(url_for('franchise.dashboard'))
+
+    if request.method == 'POST':
+        login_id = (request.form.get('login_id') or request.form.get('username') or '').strip()
+        password = request.form.get('password', '')
+
+        if not login_id or not password:
+            flash('Please enter both username/email and password.', 'danger')
+            return render_template('auth/login.html')
+
+        user = User.query.filter(
+            (User.username.ilike(login_id)) | (User.email.ilike(login_id))
+        ).first()
+
+        if user and user.check_password(password):
+            if not user.is_active:
+                log_audit(user.id, 'LOGIN_FAILED', 'User', user.id, None, 'Account inactive', status='FAILED')
+                flash('This account is inactive. Please contact the Admin.', 'danger')
+                return render_template('auth/login.html')
+
+            user.last_login_at = datetime.utcnow()
+            db.session.commit()
+            login_user(user)
+            log_audit(user.id, 'LOGIN_SUCCESS', 'User', user.id, None, f"Logged in as {user.role}", status='SUCCESS')
+
+            next_page = request.args.get('next')
+            if next_page and next_page.startswith('/'):
+                return redirect(next_page)
+
+            if user.is_admin:
+                return redirect(url_for('admin.dashboard'))
+            return redirect(url_for('franchise.dashboard'))
+        else:
+            log_audit(None, 'LOGIN_FAILED', 'User', None, None, f"Failed attempt for '{login_id}'", status='FAILED')
+            flash('Invalid username or password.', 'danger')
+
+    return render_template('auth/login.html')
+
+@auth_bp.route('/google/login')
+@auth_bp.route('/auth/google/login')
+def google_login():
+    """Initiate Google OAuth Authorization Flow."""
+    mock_email = request.args.get('mock_email')
+    if mock_email:
+        return redirect(url_for('auth.google_callback', mock_email=mock_email))
+
+    client_id = current_app.config.get('GOOGLE_CLIENT_ID')
+    is_unconfigured = not client_id or client_id in ['MOCK_GOOGLE_CLIENT_ID', 'your_google_client_id', 'YOUR_GOOGLE_CLIENT_ID', 'your_google_client_id.apps.googleusercontent.com']
+
+    if is_unconfigured:
+        franchises = Franchise.query.filter_by(is_active=True).all()
+        return render_template('auth/google_auth_prompt.html', franchises=franchises)
+
+    try:
+        redirect_uri = current_app.config.get('GOOGLE_REDIRECT_URI') or url_for('auth.google_callback', _external=True)
+        return oauth.google.authorize_redirect(redirect_uri)
+    except Exception as e:
+        log_audit(None, 'GOOGLE_LOGIN_FAILED', 'User', None, None, f"OAuth init error: {e}", status='FAILED')
+        franchises = Franchise.query.filter_by(is_active=True).all()
+        return render_template('auth/google_auth_prompt.html', franchises=franchises)
+
+@auth_bp.route('/google/callback')
+@auth_bp.route('/auth/google/callback')
+def google_callback():
+    """Handle Google OAuth Authorization Callback."""
+    mock_email = request.args.get('mock_email')
+    google_email = None
+    google_sub = None
+
+    if mock_email:
+        google_email = mock_email.strip().lower()
+    else:
+        client_id = current_app.config.get('GOOGLE_CLIENT_ID')
+        is_unconfigured = not client_id or client_id in ['MOCK_GOOGLE_CLIENT_ID', 'your_google_client_id', 'YOUR_GOOGLE_CLIENT_ID', 'your_google_client_id.apps.googleusercontent.com']
+        if is_unconfigured:
+            return redirect(url_for('auth.google_login'))
+
+        try:
+            token = oauth.google.authorize_access_token()
+            userinfo = token.get('userinfo')
+            if not userinfo:
+                userinfo = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo').json()
+
+            google_email = (userinfo.get('email') or '').strip().lower()
+            email_verified = userinfo.get('email_verified', True)
+            google_sub = userinfo.get('sub')
+
+            if not google_email or not email_verified:
+                log_audit(None, 'GOOGLE_LOGIN_FAILED', 'User', None, None, 'Unverified or missing Google email', status='FAILED')
+                flash('Google authentication failed: Email address not verified by Google.', 'danger')
+                return redirect(url_for('auth.login'))
+        except Exception as e:
+            log_audit(None, 'GOOGLE_LOGIN_FAILED', 'User', None, None, f"OAuth Token Error: {e}", status='FAILED')
+            flash(f'Google authentication error ({e}). Please sign in using username and password or simulation mode.', 'danger')
+            return redirect(url_for('auth.login'))
+
+    # Normalize email
+    norm_email = google_email.strip().lower()
+
+    # Lookup Franchise & User by authorized email
+    franchise = Franchise.query.filter(Franchise.authorized_email.ilike(norm_email)).first()
+    user = User.query.filter(User.email.ilike(norm_email)).first()
+
+    if not franchise and user and user.franchise_id:
+        franchise = db.session.get(Franchise, user.franchise_id)
+
+    if not franchise and not (user and user.is_admin):
+        log_audit(None, 'GOOGLE_ACCOUNT_UNAUTHORIZED', 'Franchise', None, None, f"Unauthorized email '{norm_email}'", status='DENIED')
+        return render_template('auth/unauthorized.html', email=norm_email, is_disabled=False)
+
+    if franchise and (not franchise.is_active or not franchise.google_auth_enabled):
+        log_audit(user.id if user else None, 'GOOGLE_LOGIN_FAILED', 'Franchise', franchise.id, None, f"Franchise '{franchise.name}' is inactive/disabled for Google auth", status='DENIED', franchise_id=franchise.id)
+        return render_template('auth/unauthorized.html', email=norm_email, franchise_name=franchise.name, is_disabled=True)
+
+    if not user and franchise:
+        user = User.query.filter_by(franchise_id=franchise.id).first()
+
+    if not user:
+        log_audit(None, 'GOOGLE_ACCOUNT_UNAUTHORIZED', 'User', None, None, f"No active user associated with email '{norm_email}'", status='DENIED')
+        return render_template('auth/unauthorized.html', email=norm_email, is_disabled=False)
+
+    if not user.is_active:
+        log_audit(user.id, 'GOOGLE_LOGIN_FAILED', 'User', user.id, None, 'User account inactive', status='DENIED', franchise_id=franchise.id if franchise else None)
+        return render_template('auth/unauthorized.html', email=norm_email, franchise_name=franchise.name if franchise else 'SPL Account', is_disabled=True)
+
+    # Log in user & create session
+    user.last_login_at = datetime.utcnow()
+    if google_sub:
+        user.google_subject_id = google_sub
+    db.session.commit()
+
+    login_user(user)
+    log_audit(user.id, 'GOOGLE_LOGIN_SUCCESS', 'User', user.id, None, f"Logged in via Google OAuth ({norm_email})", status='SUCCESS', franchise_id=user.franchise_id)
+
+    if user.is_admin:
+        return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('franchise.dashboard'))
+
+@auth_bp.route('/logout', methods=['GET', 'POST'])
+@auth_bp.route('/auth/logout', methods=['GET', 'POST'])
+@login_required
+def logout():
+    user_id = current_user.id if current_user.is_authenticated else None
+    log_audit(user_id, 'LOGOUT', 'User', user_id, None, 'User logged out', status='SUCCESS')
+    logout_user()
+    flash('You have been logged out successfully.', 'info')
+    return redirect(url_for('auth.login'))

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event_name }} — LIVE PROJECTOR DISPLAY{% endblock %}
+
+{% block content_wrapper %}
+<!-- Projector Floating Control Toolbar -->
+<div class="projector-toolbar">
+    <button type="button" id="btn-toggle-sound" class="btn btn-outline-secondary btn-sm" onclick="toggleSound()">
+        <i class="fa-solid fa-volume-xmark me-1"></i> SOUND OFF
+    </button>
+    <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleFullscreen()">
+        <i class="fa-solid fa-expand me-1"></i> ENTER FULLSCREEN
+    </button>
+</div>
+
+<div class="live-wrapper" id="live-projector-content">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <div class="projector-stage">
+        <!-- Header Branding -->
+        <div class="mb-4 text-center">
+            <h1 class="live-brand-title mb-1">{{ event_name }}</h1>
+            <div class="live-sub-title mb-2">{{ event_subtitle }}</div>
+            <div class="badge bg-primary px-4 py-2 fs-5 tracking-wide shadow-lg">LIVE AUCTION</div>
+        </div>
+
+        <!-- State 1: WAITING FOR NEXT PLAYER (No queue or future players revealed!) -->
+        <div id="projector-status-waiting" class="live-status-box my-auto shadow-lg animate-entrance">
+            <div class="d-flex flex-column align-items-center justify-content-center gap-3">
+                <i class="fa-solid fa-gavel text-warning fa-4x mb-2"></i>
+                <div id="projector-waiting-text" class="live-waiting-text">WAITING FOR NEXT PLAYER</div>
+                <div class="text-muted fs-5 fw-semibold">Anchor: Please announce the next player chit</div>
+            </div>
+        </div>
+
+        <!-- State 2 & 3 & 4: ACTIVE PLAYER CARD (PLAYER_PREVIEW, BIDDING, PAUSED, TIME EXPIRED) -->
+        <div id="projector-player-card" class="spl-card border-cyan p-4 p-md-5 d-none my-auto shadow-lg animate-entrance" style="max-width: 1050px; width: 100%;">
+            <!-- New Bid Banner Toast (Animated overlay) -->
+            <div id="projector-new-bid-tag" class="badge bg-success fs-4 px-4 py-2 mb-3 shadow d-none text-uppercase tracking-wide animate-bid-update">
+                NEW BID ₹0
+            </div>
+
+            <div class="row align-items-center g-4">
+                <div class="col-md-5 text-center">
+                    <img id="projector-player-photo" src="{{ url_for('static', filename='uploads/default_player.png') }}" class="img-fluid rounded-circle border border-cyan border-4 shadow-lg" style="width: 240px; height: 240px; object-fit: cover;">
+                </div>
+                <div class="col-md-7 text-start">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <h1 class="display-4 fw-bold text-white mb-0" id="projector-player-name">Player Name</h1>
+                        <span class="display-5 text-cyan fw-bold" id="projector-player-roll">#00</span>
+                    </div>
+                    <div class="d-flex gap-2 mb-4">
+                        <span class="badge badge-role fs-5 px-3 py-2" id="projector-player-role">ROLE</span>
+                        <span class="badge badge-category fs-5 px-3 py-2" id="projector-player-category">CATEGORY</span>
+                    </div>
+                    <div class="fs-3 text-muted mb-0">Base Price: <strong class="text-gold" id="projector-base-price">₹10,000</strong></div>
+                </div>
+            </div>
+
+            <hr class="border-secondary my-4">
+
+            <div class="row g-4 text-center">
+                <!-- Most visually important financial element: CURRENT BID -->
+                <div class="col-md-5">
+                    <div class="p-3 border border-secondary rounded bg-dark shadow">
+                        <small class="text-muted d-block fw-bold fs-6 mb-1">CURRENT BID</small>
+                        <div class="display-3 fw-bold text-gold" id="projector-current-bid">₹10,000</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 border border-secondary rounded bg-dark shadow">
+                        <small class="text-muted d-block fw-bold fs-6 mb-1">HIGHEST BIDDER</small>
+                        <div class="display-6 fw-bold text-cyan text-truncate mt-1" id="projector-highest-bidder">NO BIDS YET</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border border-secondary rounded bg-dark shadow">
+                        <small class="text-muted d-block fw-bold fs-6 mb-1">TIME REMAINING</small>
+                        <div id="projector-timer" class="display-4 fw-bold text-cyan">00:30</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- State 6: SOLD SCREEN -->
+        <div id="projector-sold-card" class="spl-card border-success p-5 d-none my-auto shadow-lg animate-sold text-center" style="max-width: 850px; width: 100%;">
+            <div class="badge bg-success fs-2 px-5 py-2 rounded-pill text-uppercase tracking-wide mb-3 shadow">
+                <i class="fa-solid fa-trophy me-2"></i>SOLD
+            </div>
+            <h1 class="display-3 fw-bold text-white mb-2" id="sold-player-name">Player Name</h1>
+            <div class="display-2 fw-bold text-gold my-3" id="sold-final-price">₹80,000</div>
+            <div class="fs-2 text-cyan fw-bold text-uppercase" id="sold-winning-franchise">Cyber Vipers</div>
+        </div>
+
+        <!-- State 7: UNSOLD SCREEN -->
+        <div id="projector-unsold-card" class="spl-card border-danger p-5 d-none my-auto shadow-lg animate-sold text-center" style="max-width: 850px; width: 100%;">
+            <div class="badge bg-danger fs-2 px-5 py-2 rounded-pill text-uppercase tracking-wide mb-3 shadow">
+                <i class="fa-solid fa-circle-xmark me-2"></i>UNSOLD
+            </div>
+            <h1 class="display-3 fw-bold text-white mb-2" id="unsold-player-name">Player Name</h1>
+            <div class="fs-3 text-muted my-3">Base Price: <strong class="text-gold fs-2" id="unsold-base-price">₹10,000</strong></div>
+            <div class="text-muted fs-5">No winning bids received for this player.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/auction.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    startAuctionPolling(1000);
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}User Account Management — {{ event_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-cyan mb-1"><i class="fa-solid fa-users-gear me-2"></i>User & Franchise Credentials</h2>
+        <p class="text-muted small mb-0">Manage system login accounts, role assignments, and password resets.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-spl-primary fw-bold" data-bs-toggle="modal" data-bs-target="#createUserModal">
+            <i class="fa-solid fa-user-plus me-1"></i>Create User Account
+        </button>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="spl-card">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0">
+            <thead class="border-bottom border-secondary text-cyan">
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Franchise Assignment</th>
+                    <th>Status</th>
+                    <th>Last Login</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td class="fw-bold text-light"><i class="fa-solid fa-user me-2 text-cyan"></i>{{ u.username }}</td>
+                    <td class="small text-muted">{{ u.email }}</td>
+                    <td>
+                        {% if u.is_admin %}
+                            <span class="badge bg-danger"><i class="fa-solid fa-user-shield me-1"></i>ADMIN</span>
+                        {% else %}
+                            <span class="badge bg-info text-dark"><i class="fa-solid fa-shield-halved me-1"></i>FRANCHISE</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.franchise %}
+                            <span class="badge bg-dark border border-secondary text-cyan">{{ u.franchise.name }} ({{ u.franchise.short_name }})</span>
+                        {% else %}
+                            <span class="text-muted small">---</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                            <span class="badge bg-success">ACTIVE</span>
+                        {% else %}
+                            <span class="badge bg-secondary">INACTIVE</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">
+                        {{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else 'Never' }}
+                    </td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-1">
+                            <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#resetPassModal{{ u.id }}">
+                                <i class="fa-solid fa-key me-1"></i>Reset Password
+                            </button>
+                            {% if u.id != current_user.id %}
+                            <form method="POST" action="{{ url_for('admin.toggle_user_status', id=u.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if u.is_active %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Disable</button>
+                                {% else %}
+                                <button type="submit" class="btn btn-outline-success btn-sm">Enable</button>
+                                {% endif %}
+                            </form>
+                            {% endif %}
+                        </div>
+
+                        <!-- Reset Password Modal -->
+                        <div class="modal fade" id="resetPassModal{{ u.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content bg-dark text-light border-secondary">
+                                    <form method="POST" action="{{ url_for('admin.reset_user_password', id=u.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <div class="modal-header border-secondary">
+                                            <h5 class="modal-title fw-bold text-cyan"><i class="fa-solid fa-key me-2"></i>Reset Password for '{{ u.username }}'</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body text-start">
+                                            <div class="mb-3">
+                                                <label for="reset_pass_{{ u.id }}" class="form-label text-cyan small fw-bold">New Password</label>
+                                                <input type="password" name="new_password" id="reset_pass_{{ u.id }}" class="form-control bg-dark text-light border-secondary" placeholder="Enter new password" required>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer border-secondary">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-warning fw-bold">Reset Password</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <form method="POST" action="{{ url_for('admin.create_user') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title fw-bold text-cyan"><i class="fa-solid fa-user-plus me-2"></i>Create New User Account</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <div class="mb-3">
+                        <label for="create_username" class="form-label text-cyan small fw-bold">Username</label>
+                        <input type="text" name="username" id="create_username" class="form-control bg-dark text-light border-secondary" placeholder="e.g. cybervipers" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_email" class="form-label text-cyan small fw-bold">Email Address</label>
+                        <input type="email" name="email" id="create_email" class="form-control bg-dark text-light border-secondary" placeholder="owner@sphoorthyengg.ac.in">
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_password" class="form-label text-cyan small fw-bold">Password</label>
+                        <input type="password" name="password" id="create_password" class="form-control bg-dark text-light border-secondary" placeholder="Initial password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_role" class="form-label text-cyan small fw-bold">User Role</label>
+                        <select name="role" id="create_role" class="form-select bg-dark text-light border-secondary">
+                            <option value="FRANCHISE" selected>FRANCHISE</option>
+                            <option value="ADMIN">ADMIN</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_franchise_id" class="form-label text-cyan small fw-bold">Assign Franchise (Optional)</label>
+                        <select name="franchise_id" id="create_franchise_id" class="form-select bg-dark text-light border-secondary">
+                            <option value="">None / Admin Account</option>
+                            {% for f in franchises %}
+                            <option value="{{ f.id }}">{{ f.name }} ({{ f.short_name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-spl-primary fw-bold">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

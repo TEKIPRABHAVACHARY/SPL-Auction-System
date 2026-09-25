@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Second-Chance Auction Console — {{ event_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-warning mb-1"><i class="fa-solid fa-rotate-right me-2"></i>Second-Chance Auction Console</h2>
+        <p class="text-muted small mb-0">Conduct second-chance bidding for eligible unsold players.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('live.auction_live') }}" target="_blank" class="btn btn-spl-primary btn-sm fw-bold">
+            <i class="fa-solid fa-desktop me-1"></i>Open 16:9 Live Screen
+        </a>
+        <a href="{{ url_for('admin.unsold_players') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-user-slash me-1"></i>Manage Unsold List
+        </a>
+    </div>
+</div>
+
+<!-- Stats Banner -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="spl-card text-center py-3 border-start border-warning border-4">
+            <span class="text-muted text-uppercase small fw-bold">Total Unsold</span>
+            <h3 class="fw-bold text-light mb-0 mt-1">{{ total_unsold }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="spl-card text-center py-3 border-start border-success border-4">
+            <span class="text-muted text-uppercase small fw-bold">Eligible for 2nd Chance</span>
+            <h3 class="fw-bold text-success mb-0 mt-1" id="sc-eligible-count">{{ eligible_unsold }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="spl-card text-center py-3 border-start border-info border-4">
+            <span class="text-muted text-uppercase small fw-bold">Sold in 2nd Chance</span>
+            <h3 class="fw-bold text-info mb-0 mt-1">{{ second_chance_sold }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="spl-card text-center py-3 border-start border-danger border-4">
+            <span class="text-muted text-uppercase small fw-bold">Auction Mode</span>
+            <h3 class="fw-bold mb-0 mt-1 {% if is_active %}text-warning{% else %}text-muted{% endif %}">
+                {% if is_active %}ACTIVE ⚡{% else %}INACTIVE{% endif %}
+            </h3>
+        </div>
+    </div>
+</div>
+
+<!-- Session Toggle & Controls -->
+<div class="spl-card mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="fw-bold text-light mb-1">Second-Chance Session State</h5>
+            <p class="text-muted small mb-0">Initiating second-chance mode enables second-chance audit logging and restricts preview to eligible players.</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if not is_active %}
+            <button type="button" id="btn-start-sc-mode" class="btn btn-warning fw-bold">
+                <i class="fa-solid fa-play me-1"></i>Start Second-Chance Auction
+            </button>
+            {% else %}
+            <button type="button" id="btn-end-sc-mode" class="btn btn-outline-danger fw-bold">
+                <i class="fa-solid fa-flag-checkered me-1"></i>End Second-Chance Auction
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Player Selection & Live Control Box -->
+<div class="row g-4 mb-4">
+    <!-- Roll # Lookup Column -->
+    <div class="col-md-5">
+        <div class="spl-card h-100">
+            <h5 class="fw-bold text-cyan mb-3"><i class="fa-solid fa-magnifying-glass me-2"></i>Select Eligible Unsold Player</h5>
+
+            <div class="mb-3">
+                <label for="sc-roll-input" class="form-label text-muted small fw-bold">Enter Player Roll Number</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-cyan">#</span>
+                    <input type="text" id="sc-roll-input" class="form-control bg-dark text-light border-secondary" placeholder="e.g. 23" autocomplete="off">
+                    <button type="button" id="sc-btn-find" class="btn btn-spl-primary"><i class="fa-solid fa-check me-1"></i>Verify</button>
+                </div>
+                <div id="sc-lookup-error" class="text-danger small mt-2 d-none"></div>
+            </div>
+
+            <!-- Preview Card -->
+            <div id="sc-preview-box" class="border border-secondary rounded-3 p-3 bg-dark d-none">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <img id="sc-preview-img" src="" alt="Player" class="rounded-circle object-fit-cover border border-cyan" width="70" height="70">
+                    <div>
+                        <h4 id="sc-preview-name" class="fw-bold text-cyan mb-0"></h4>
+                        <span id="sc-preview-roll" class="badge bg-secondary"></span>
+                        <span id="sc-preview-role" class="badge bg-dark border border-secondary"></span>
+                        <span id="sc-preview-cat" class="badge bg-info text-dark"></span>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary">
+                    <span class="text-muted small">Base Price: <strong id="sc-preview-base" class="text-light"></strong></span>
+                    <button type="button" id="sc-btn-activate" class="btn btn-success btn-sm fw-bold">
+                        <i class="fa-solid fa-bolt me-1"></i>ACTIVATE FOR BIDDING
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Bidding Controls -->
+    <div class="col-md-7">
+        <div class="spl-card h-100">
+            <h5 class="fw-bold text-cyan mb-3"><i class="fa-solid fa-gamepad me-2"></i>Active Auction Controls</h5>
+
+            <div id="sc-active-display" class="bg-dark rounded-3 p-3 mb-3 border border-secondary text-center">
+                <span id="sc-active-status" class="badge bg-warning text-dark mb-2">WAITING</span>
+                <h3 id="sc-active-player" class="fw-bold text-light mb-1">No Active Player</h3>
+                <h2 id="sc-active-bid" class="fw-bold text-cyan mb-2">Rs. 0</h2>
+                <span id="sc-active-bidder" class="badge bg-secondary fs-6">No Bidder Yet</span>
+                <div id="sc-active-timer" class="fs-4 fw-bold text-danger mt-2">-- : --</div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 justify-content-center">
+                <button type="button" id="sc-ctrl-start" class="btn btn-success fw-bold px-3">
+                    <i class="fa-solid fa-play me-1"></i>Start Bidding
+                </button>
+                <button type="button" id="sc-ctrl-pause" class="btn btn-warning fw-bold px-3">
+                    <i class="fa-solid fa-pause me-1"></i>Pause
+                </button>
+                <button type="button" id="sc-ctrl-resume" class="btn btn-info text-dark fw-bold px-3">
+                    <i class="fa-solid fa-forward me-1"></i>Resume
+                </button>
+                <button type="button" id="sc-ctrl-extend" class="btn btn-outline-info fw-bold px-3">
+                    <i class="fa-solid fa-clock-rotate-left me-1"></i>+10s
+                </button>
+                <button type="button" id="sc-ctrl-sold" class="btn btn-success fw-bold px-4">
+                    <i class="fa-solid fa-gavel me-1"></i>MARK SOLD
+                </button>
+                <button type="button" id="sc-ctrl-unsold" class="btn btn-danger fw-bold px-4">
+                    <i class="fa-solid fa-xmark me-1"></i>MARK UNSOLD
+                </button>
+                <button type="button" id="sc-ctrl-reset" class="btn btn-secondary fw-bold px-3">
+                    <i class="fa-solid fa-arrow-rotate-left me-1"></i>Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const csrfToken = "{{ csrf_token() }}";
+    let loadedPlayerId = null;
+
+    // Start/End Second Chance Session
+    document.getElementById('btn-start-sc-mode')?.addEventListener('click', async () => {
+        const res = await fetch('/api/auction/second-chance/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken}
+        });
+        if (res.ok) window.location.reload();
+    });
+
+    document.getElementById('btn-end-sc-mode')?.addEventListener('click', async () => {
+        if (!confirm('End Second-Chance Auction? All remaining eligible unsold players will become FINAL_UNSOLD.')) return;
+        const res = await fetch('/api/auction/second-chance/end', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken}
+        });
+        if (res.ok) window.location.reload();
+    });
+
+    // Lookup Player
+    document.getElementById('sc-btn-find')?.addEventListener('click', async () => {
+        const roll = document.getElementById('sc-roll-input').value.trim();
+        const errDiv = document.getElementById('sc-lookup-error');
+        errDiv.classList.add('d-none');
+
+        if (!roll) return;
+
+        const res = await fetch('/api/auction/second-chance/find-player', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify({roll_number: roll})
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+            errDiv.textContent = data.message;
+            errDiv.classList.remove('d-none');
+            document.getElementById('sc-preview-box').classList.add('d-none');
+            return;
+        }
+
+        const p = data.player;
+        loadedPlayerId = p.id;
+        document.getElementById('sc-preview-name').textContent = p.name;
+        document.getElementById('sc-preview-roll').textContent = '#' + p.roll_number;
+        document.getElementById('sc-preview-role').textContent = p.role;
+        document.getElementById('sc-preview-cat').textContent = p.category;
+        document.getElementById('sc-preview-base').textContent = 'Rs. ' + p.base_price.toLocaleString();
+        document.getElementById('sc-preview-img').src = (p.photo && !p.photo.startsWith('http')) ? '/static/uploads/' + p.photo : (p.photo || '/static/uploads/default_player.png');
+        document.getElementById('sc-preview-box').classList.remove('d-none');
+    });
+
+    // Activate Player
+    document.getElementById('sc-btn-activate')?.addEventListener('click', async () => {
+        if (!loadedPlayerId) return;
+        const res = await fetch('/api/auction/activate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify({player_id: loadedPlayerId})
+        });
+        if (res.ok) updateStateDisplay();
+    });
+
+    // Action Controls
+    const apiCall = async (url, body = {}) => {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!data.success) alert(data.message);
+        updateStateDisplay();
+    };
+
+    document.getElementById('sc-ctrl-start')?.addEventListener('click', () => apiCall('/api/auction/start'));
+    document.getElementById('sc-ctrl-pause')?.addEventListener('click', () => apiCall('/api/auction/pause'));
+    document.getElementById('sc-ctrl-resume')?.addEventListener('click', () => apiCall('/api/auction/resume'));
+    document.getElementById('sc-ctrl-extend')?.addEventListener('click', () => apiCall('/api/auction/extend', {seconds: 10}));
+    document.getElementById('sc-ctrl-sold')?.addEventListener('click', () => {
+        if (confirm('Confirm MARK SOLD?')) apiCall('/api/auction/sold');
+    });
+    document.getElementById('sc-ctrl-unsold')?.addEventListener('click', () => {
+        if (confirm('Confirm MARK UNSOLD?')) apiCall('/api/auction/unsold');
+    });
+    document.getElementById('sc-ctrl-reset')?.addEventListener('click', () => apiCall('/api/auction/reset'));
+
+    // State Polling Update
+    async function updateStateDisplay() {
+        const res = await fetch('/api/auction/state');
+        if (!res.ok) return;
+        const state = await res.json();
+
+        document.getElementById('sc-active-status').textContent = state.status;
+        document.getElementById('sc-active-player').textContent = state.active_player ? state.active_player.name : 'No Active Player';
+        document.getElementById('sc-active-bid').textContent = 'Rs. ' + (state.current_bid || 0).toLocaleString();
+        document.getElementById('sc-active-bidder').textContent = state.highest_bidder ? state.highest_bidder.name : 'No Bidder Yet';
+        document.getElementById('sc-active-timer').textContent = state.remaining_seconds + 's';
+    }
+
+    setInterval(updateStateDisplay, 1500);
+    updateStateDisplay();
+});
+</script>
+{% endblock %}

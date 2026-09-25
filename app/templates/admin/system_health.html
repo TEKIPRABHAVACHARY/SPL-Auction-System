@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}System Health — SPL Admin{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-heart-pulse-fill text-danger me-2"></i>System Health Dashboard</h2>
+            <p class="text-muted mb-0">Real-time status of all backend engines and infrastructure</p>
+        </div>
+        <div>
+            <span class="badge {% if health.overall == 'OK' %}bg-success{% else %}bg-danger{% endif %} fs-6 px-3 py-2">
+                Overall: {{ health.overall }}
+            </span>
+            <a href="{{ url_for('admin.system_health') }}" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-database me-2 text-primary"></i>Database</h5>
+                        <span class="badge {% if health.subsystems.database.status == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ health.subsystems.database.status }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small mb-1">{{ health.subsystems.database.details }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-shield-lock me-2 text-primary"></i>Authentication</h5>
+                        <span class="badge {% if health.subsystems.authentication.status == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ health.subsystems.authentication.status }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small mb-1">{{ health.subsystems.authentication.details }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-hammer me-2 text-primary"></i>Auction Engine</h5>
+                        <span class="badge {% if health.subsystems.auction_engine.status == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ health.subsystems.auction_engine.status }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small mb-1">{{ health.subsystems.auction_engine.details }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-wallet2 me-2 text-primary"></i>Purse Engine</h5>
+                        <span class="badge {% if health.subsystems.purse_engine.status == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ health.subsystems.purse_engine.status }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small mb-1">{{ health.subsystems.purse_engine.details }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-people me-2 text-primary"></i>Squad Engine</h5>
+                        <span class="badge {% if health.subsystems.squad_engine.status == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ health.subsystems.squad_engine.status }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small mb-1">{{ health.subsystems.squad_engine.details }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-calendar-event me-2 text-primary"></i>Fixture Engine</h5>
+                        <span class="badge {% if health.subsystems.fixture_engine.status == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ health.subsystems.fixture_engine.status }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small mb-1">{{ health.subsystems.fixture_engine.details }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-journal-text me-2 text-primary"></i>Audit Log</h5>
+                        <span class="badge {% if health.subsystems.audit_log.status == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ health.subsystems.audit_log.status }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small mb-1">{{ health.subsystems.audit_log.details }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-folder me-2 text-primary"></i>Static Files</h5>
+                        <span class="badge {% if health.subsystems.static_files.status == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ health.subsystems.static_files.status }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small mb-1">{{ health.subsystems.static_files.details }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-gear me-2 text-primary"></i>Configuration</h5>
+                        <span class="badge {% if health.subsystems.configuration.status == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ health.subsystems.configuration.status }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small mb-1">{{ health.subsystems.configuration.details }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-body font-monospace fw-bold">
+            <i class="bi bi-activity me-2"></i>Event State: <span class="badge bg-primary fs-6">{{ current_state }}</span>
+        </div>
+        <div class="card-body text-muted small">
+            Checked at {{ health.timestamp }}
+        </div>
+    </div>
+</div>
+{% endblock %}

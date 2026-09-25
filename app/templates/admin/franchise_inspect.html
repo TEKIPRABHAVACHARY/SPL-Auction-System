@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Inspect {{ franchise.name }} — {{ event_name }} Admin{% endblock %}
+
+{% block content_wrapper %}
+<div class="d-flex flex-column flex-lg-row">
+    <!-- Sidebar Navigation -->
+    <div class="spl-sidebar">
+        <div class="spl-brand">
+            <i class="fa-solid fa-gavel text-cyan me-2"></i>{{ event_name }} <span class="spl-accent">ADMIN</span>
+        </div>
+        <div class="spl-nav">
+            <a href="{{ url_for('admin.dashboard') }}" class="spl-nav-item">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.players') }}" class="spl-nav-item">
+                <i class="fa-solid fa-users"></i> Players
+            </a>
+            <a href="{{ url_for('admin.franchises') }}" class="spl-nav-item active">
+                <i class="fa-solid fa-shield-halved"></i> Franchises
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="spl-nav-item">
+                <i class="fa-solid fa-gears"></i> Settings
+            </a>
+        </div>
+        <div class="p-3 border-top border-secondary">
+            <a href="{{ url_for('auth.logout') }}" class="spl-nav-item text-danger p-0">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="spl-content flex-grow-1">
+        <!-- Header Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
+            <div class="d-flex align-items-center gap-3">
+                <a href="{{ url_for('admin.franchises') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left me-1"></i> Back</a>
+                <div>
+                    <h2 class="fw-bold text-white mb-0">Inspecting: {{ franchise.name }} ({{ franchise.short_name }})</h2>
+                    <small class="text-muted">Administrator inspection console</small>
+                </div>
+            </div>
+            <span class="badge {% if franchise.is_active %}bg-success{% else %}bg-secondary{% endif %} fs-6 px-3 py-2">
+                {% if franchise.is_active %}ACTIVE FRANCHISE{% else %}INACTIVE{% endif %}
+            </span>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="spl-card text-center">
+                    <small class="text-muted fw-semibold">AUTHORIZED GMAIL</small>
+                    <div class="text-cyan fw-semibold text-truncate small mt-1">{{ franchise.authorized_email or 'Not Set' }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="spl-card text-center">
+                    <small class="text-muted fw-semibold">REMAINING PURSE</small>
+                    <h3 class="fw-bold text-gold mb-0">{{ franchise.remaining_purse | currency }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="spl-card text-center">
+                    <small class="text-muted fw-semibold">SPENT AMOUNT</small>
+                    <h3 class="fw-bold text-white mb-0">{{ franchise.spent_purse | currency }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="spl-card text-center">
+                    <small class="text-muted fw-semibold">SQUAD SLOTS</small>
+                    <h3 class="fw-bold text-cyan mb-0">{{ players | length }} / {{ franchise.squad_limit }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Squad Roster Table -->
+        <div class="spl-card p-0 overflow-hidden mb-4">
+            <div class="spl-card-header p-3 border-bottom border-secondary">
+                <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-users text-cyan me-2"></i>Purchased Players Roster ({{ players | length }})</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-spl mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Roll No</th>
+                            <th>Player Name</th>
+                            <th>Role</th>
+                            <th>Category</th>
+                            <th class="text-end pe-3">Sold Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if players %}
+                            {% for p in players %}
+                            <tr>
+                                <td class="ps-3 text-cyan fw-bold">{{ p.roll_number }}</td>
+                                <td class="fw-semibold text-white">{{ p.name }}</td>
+                                <td><span class="badge badge-role">{{ p.role }}</span></td>
+                                <td><span class="badge badge-category">{{ p.category }}</span></td>
+                                <td class="text-end pe-3 text-gold fw-bold">{{ p.sold_price | currency }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="5" class="text-center py-4 text-muted">No players acquired yet.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Bid Log -->
+        <div class="spl-card p-0 overflow-hidden">
+            <div class="spl-card-header p-3 border-bottom border-secondary">
+                <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-gavel text-warning me-2"></i>Bid Activity Log ({{ bids | length }})</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-spl mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Time</th>
+                            <th>Player</th>
+                            <th class="text-end pe-3">Bid Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if bids %}
+                            {% for b in bids %}
+                            <tr>
+                                <td class="ps-3 text-muted small">{{ b.created_at.strftime('%H:%M:%S (%Y-%m-%d)') }}</td>
+                                <td class="fw-semibold text-white">{{ b.player.name if b.player else 'N/A' }}</td>
+                                <td class="text-end pe-3 text-cyan fw-bold">{{ b.amount | currency }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="3" class="text-center py-4 text-muted">No bids recorded.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

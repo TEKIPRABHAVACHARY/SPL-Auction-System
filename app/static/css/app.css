@@ -1,0 +1,638 @@
+/* SPL — Sphoorthy Premier League Professional Sports Auction System CSS */
+
+/* ==========================================
+   1. DESIGN TOKENS & THEME VARIABLES
+   ========================================== */
+:root, [data-theme="dark"] {
+  --spl-bg-main: #0b1329;
+  --spl-bg-card: #142247;
+  --spl-bg-card-hover: #1b2c5a;
+  --spl-bg-sidebar: #060e20;
+  --spl-bg-input: #0d1733;
+  --spl-bg-modal: #142247;
+  --spl-bg-dropdown: #142247;
+  --spl-bg-surface: #1e2e5c;
+
+  --spl-text-primary: #f1f5f9;
+  --spl-text-secondary: #94a3b8;
+  --spl-text-muted: #64748b;
+  --spl-text-heading: #ffffff;
+  --spl-text-inverse: #0f172a;
+
+  --spl-accent-cyan: #00f2fe;
+  --spl-accent-blue: #3b82f6;
+  --spl-accent-gold: #f59e0b;
+  --spl-accent-gold-hover: #d97706;
+
+  --spl-border-color: rgba(255, 255, 255, 0.12);
+  --spl-border-subtle: rgba(255, 255, 255, 0.06);
+
+  --spl-card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  --spl-table-stripe: rgba(255, 255, 255, 0.02);
+  --spl-table-hover: rgba(0, 242, 254, 0.08);
+
+  --spl-input-bg: #0d1733;
+  --spl-input-text: #f1f5f9;
+  --spl-input-placeholder: #64748b;
+  --spl-input-border: rgba(255, 255, 255, 0.15);
+
+  --spl-success-bg: rgba(16, 185, 129, 0.15);
+  --spl-success-text: #10b981;
+  --spl-success-border: rgba(16, 185, 129, 0.3);
+
+  --spl-warning-bg: rgba(245, 158, 11, 0.15);
+  --spl-warning-text: #fbbf24;
+  --spl-warning-border: rgba(245, 158, 11, 0.3);
+
+  --spl-danger-bg: rgba(239, 68, 68, 0.15);
+  --spl-danger-text: #f87171;
+  --spl-danger-border: rgba(239, 68, 68, 0.3);
+
+  --spl-projector-bg: radial-gradient(circle at center, #142247 0%, #060e20 100%);
+  --spl-projector-card: rgba(20, 34, 71, 0.95);
+}
+
+[data-theme="light"] {
+  --spl-bg-main: #f8fafc;
+  --spl-bg-card: #ffffff;
+  --spl-bg-card-hover: #f1f5f9;
+  --spl-bg-sidebar: #0f172a;
+  --spl-bg-input: #ffffff;
+  --spl-bg-modal: #ffffff;
+  --spl-bg-dropdown: #ffffff;
+  --spl-bg-surface: #e2e8f0;
+
+  --spl-text-primary: #1e293b;
+  --spl-text-secondary: #475569;
+  --spl-text-muted: #64748b;
+  --spl-text-heading: #0f172a;
+  --spl-text-inverse: #ffffff;
+
+  --spl-accent-cyan: #0284c7;
+  --spl-accent-blue: #2563eb;
+  --spl-accent-gold: #d97706;
+  --spl-accent-gold-hover: #b45309;
+
+  --spl-border-color: #cbd5e1;
+  --spl-border-subtle: #e2e8f0;
+
+  --spl-card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+  --spl-table-stripe: #f8fafc;
+  --spl-table-hover: #e0f2fe;
+
+  --spl-input-bg: #ffffff;
+  --spl-input-text: #0f172a;
+  --spl-input-placeholder: #94a3b8;
+  --spl-input-border: #cbd5e1;
+
+  --spl-success-bg: #d1fae5;
+  --spl-success-text: #047857;
+  --spl-success-border: #a7f3d0;
+
+  --spl-warning-bg: #fef3c7;
+  --spl-warning-text: #b45309;
+  --spl-warning-border: #fde68a;
+
+  --spl-danger-bg: #fee2e2;
+  --spl-danger-text: #b91c1c;
+  --spl-danger-border: #fca5a5;
+
+  --spl-projector-bg: radial-gradient(circle at center, #ffffff 0%, #e2e8f0 100%);
+  --spl-projector-card: rgba(255, 255, 255, 0.98);
+}
+
+/* ==========================================
+   2. GLOBAL RESET & BASE TYPOGRAPHY
+   ========================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--spl-bg-main);
+  color: var(--spl-text-primary);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  line-height: 1.5;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--spl-text-heading);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-weight: 700;
+  margin-top: 0;
+}
+
+a {
+  color: var(--spl-accent-cyan);
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--spl-accent-blue);
+}
+
+.text-muted {
+  color: var(--spl-text-muted) !important;
+}
+
+/* Override utility text classes in both light and dark modes to guarantee readability */
+.text-white, .text-light {
+  color: var(--spl-text-heading) !important;
+}
+
+.text-dark {
+  color: var(--spl-text-heading) !important;
+}
+
+.text-cyan {
+  color: var(--spl-accent-cyan) !important;
+}
+
+.text-gold {
+  color: var(--spl-accent-gold) !important;
+}
+
+.bg-dark {
+  background-color: var(--spl-bg-surface) !important;
+  color: var(--spl-text-primary) !important;
+}
+
+.border-secondary {
+  border-color: var(--spl-border-color) !important;
+}
+
+.border-cyan {
+  border-color: var(--spl-accent-cyan) !important;
+}
+
+/* ==========================================
+   3. CARDS & PANELS
+   ========================================== */
+.spl-card, .card {
+  background-color: var(--spl-bg-card);
+  border: 1px solid var(--spl-border-color);
+  border-radius: 12px;
+  box-shadow: var(--spl-card-shadow);
+  color: var(--spl-text-primary);
+  padding: 1.25rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.spl-card:hover {
+  border-color: var(--spl-accent-cyan);
+}
+
+.spl-card-header, .card-header {
+  background-color: transparent;
+  border-bottom: 1px solid var(--spl-border-color);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  color: var(--spl-text-heading);
+}
+
+.card-footer {
+  background-color: transparent;
+  border-top: 1px solid var(--spl-border-color);
+}
+
+/* ==========================================
+   4. SIDEBAR & NAVIGATION
+   ========================================== */
+.spl-sidebar {
+  width: 260px;
+  background-color: var(--spl-bg-sidebar);
+  border-right: 1px solid var(--spl-border-color);
+  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.spl-brand {
+  padding: 1.5rem 1.25rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--spl-border-color);
+  color: #ffffff;
+}
+
+.spl-brand .spl-accent {
+  color: var(--spl-accent-cyan);
+}
+
+.spl-nav {
+  padding: 1rem 0;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.spl-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 0.7rem 1.5rem;
+  color: #94a3b8;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.spl-nav-item i {
+  margin-right: 0.75rem;
+  width: 20px;
+  text-align: center;
+}
+
+.spl-nav-item:hover, .spl-nav-item.active {
+  color: var(--spl-accent-cyan);
+  background-color: rgba(0, 242, 254, 0.08);
+  border-left: 3px solid var(--spl-accent-cyan);
+}
+
+.spl-content {
+  margin-left: 260px;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+@media (max-width: 991.98px) {
+  .spl-sidebar {
+    position: relative;
+    width: 100%;
+    min-height: auto;
+  }
+  .spl-content {
+    margin-left: 0;
+    padding: 1rem;
+  }
+}
+
+/* ==========================================
+   5. TABLES & DATA GRIDS
+   ========================================== */
+.table, .table-spl {
+  color: var(--spl-text-primary);
+  background-color: transparent;
+  border-color: var(--spl-border-color);
+  vertical-align: middle;
+  width: 100%;
+}
+
+.table th, .table-spl th {
+  background-color: var(--spl-bg-card);
+  color: var(--spl-text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--spl-border-color);
+  padding: 0.85rem 1rem;
+}
+
+.table td, .table-spl td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--spl-border-color);
+  background-color: var(--spl-bg-card);
+  color: var(--spl-text-primary);
+}
+
+.table tbody tr:hover td, .table-spl tbody tr:hover td {
+  background-color: var(--spl-table-hover);
+}
+
+.player-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--spl-border-color);
+}
+
+/* ==========================================
+   6. FORMS, INPUTS & CONTROLS
+   ========================================== */
+.form-control, .form-select, .form-control-spl, .form-select-spl {
+  background-color: var(--spl-input-bg) !important;
+  border: 1px solid var(--spl-input-border) !important;
+  color: var(--spl-input-text) !important;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control::placeholder, .form-control-spl::placeholder {
+  color: var(--spl-input-placeholder) !important;
+  opacity: 1;
+}
+
+.form-control:focus, .form-select:focus, .form-control-spl:focus, .form-select-spl:focus {
+  background-color: var(--spl-input-bg) !important;
+  border-color: var(--spl-accent-cyan) !important;
+  color: var(--spl-input-text) !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 242, 254, 0.15) !important;
+}
+
+.form-label {
+  color: var(--spl-text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.input-group-text {
+  background-color: var(--spl-bg-surface) !important;
+  border-color: var(--spl-input-border) !important;
+  color: var(--spl-accent-cyan) !important;
+}
+
+/* ==========================================
+   7. BUTTONS
+   ========================================== */
+.btn {
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.55rem 1.15rem;
+  transition: all 0.2s ease;
+}
+
+.btn-spl-primary {
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+  color: #060e20 !important;
+  font-weight: 700;
+  border: none;
+}
+
+.btn-spl-primary:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.btn-outline-cyan {
+  color: var(--spl-accent-cyan);
+  border-color: var(--spl-accent-cyan);
+}
+
+.btn-outline-cyan:hover {
+  background-color: var(--spl-accent-cyan);
+  color: #060e20;
+}
+
+/* ==========================================
+   8. BADGES & STATUS INDICATORS
+   ========================================== */
+.badge {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+}
+
+.badge-status-waiting {
+  background-color: var(--spl-warning-bg);
+  color: var(--spl-warning-text);
+  border: 1px solid var(--spl-warning-border);
+}
+
+.badge-status-available {
+  background-color: var(--spl-success-bg);
+  color: var(--spl-success-text);
+  border: 1px solid var(--spl-success-border);
+}
+
+.badge-status-sold {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badge-status-unsold {
+  background-color: var(--spl-danger-bg);
+  color: var(--spl-danger-text);
+  border: 1px solid var(--spl-danger-border);
+}
+
+.badge-role {
+  background-color: rgba(0, 242, 254, 0.12);
+  color: var(--spl-accent-cyan);
+  border: 1px solid rgba(0, 242, 254, 0.25);
+  font-size: 0.8rem;
+}
+
+.badge-category {
+  background-color: var(--spl-warning-bg);
+  color: var(--spl-accent-gold);
+  border: 1px solid var(--spl-warning-border);
+  font-size: 0.8rem;
+}
+
+/* ==========================================
+   9. MODALS & DROPDOWNS
+   ========================================== */
+.modal-content, .modal-content-spl {
+  background-color: var(--spl-bg-modal);
+  border: 1px solid var(--spl-border-color);
+  border-radius: 12px;
+  color: var(--spl-text-primary);
+}
+
+.modal-header, .modal-header-spl {
+  border-bottom: 1px solid var(--spl-border-color);
+  color: var(--spl-text-heading);
+}
+
+.modal-footer, .modal-footer-spl {
+  border-top: 1px solid var(--spl-border-color);
+}
+
+.dropdown-menu {
+  background-color: var(--spl-bg-dropdown);
+  border: 1px solid var(--spl-border-color);
+  box-shadow: var(--spl-card-shadow);
+}
+
+.dropdown-item {
+  color: var(--spl-text-primary);
+}
+
+.dropdown-item:hover {
+  background-color: var(--spl-table-hover);
+  color: var(--spl-accent-cyan);
+}
+
+/* ==========================================
+   10. ALERTS
+   ========================================== */
+.alert {
+  border-radius: 10px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+.alert-danger {
+  background-color: var(--spl-danger-bg);
+  color: var(--spl-danger-text);
+  border-color: var(--spl-danger-border);
+}
+
+.alert-success {
+  background-color: var(--spl-success-bg);
+  color: var(--spl-success-text);
+  border-color: var(--spl-success-border);
+}
+
+.alert-info {
+  background-color: rgba(0, 242, 254, 0.12);
+  color: var(--spl-accent-cyan);
+  border-color: rgba(0, 242, 254, 0.25);
+}
+
+.alert-warning {
+  background-color: var(--spl-warning-bg);
+  color: var(--spl-warning-text);
+  border-color: var(--spl-warning-border);
+}
+
+/* ==========================================
+   11. PROJECTOR DISPLAY (LARGE LED SCREEN / AUDITORIUM VIEW)
+   ========================================== */
+.live-wrapper {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--spl-projector-bg);
+  padding: 2.5rem;
+  box-sizing: border-box;
+}
+
+.projector-stage {
+  width: 100%;
+  max-width: 1350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+}
+
+.live-brand-title {
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 900;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, var(--spl-text-heading) 0%, var(--spl-accent-cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.live-sub-title {
+  font-size: clamp(1.2rem, 2.5vw, 2rem);
+  color: var(--spl-text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.live-status-box {
+  background: var(--spl-projector-card);
+  border: 2px solid var(--spl-accent-cyan);
+  box-shadow: 0 0 50px rgba(0, 242, 254, 0.2);
+  border-radius: 24px;
+  padding: 4rem 6rem;
+}
+
+.live-waiting-text {
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--spl-accent-gold);
+}
+
+.projector-toolbar {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 999;
+  display: flex;
+  gap: 0.5rem;
+  opacity: 0.75;
+  transition: opacity 0.3s ease;
+}
+
+.projector-toolbar:hover {
+  opacity: 1;
+}
+
+/* Projector Animations */
+@keyframes bidPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); color: var(--spl-accent-cyan); }
+  100% { transform: scale(1); }
+}
+
+.animate-bid-update {
+  animation: bidPulse 0.4s ease-out;
+}
+
+@keyframes cardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(25px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-entrance {
+  animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes soldCelebration {
+  0% {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-sold {
+  animation: soldCelebration 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes timerUrgent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.timer-urgent {
+  color: var(--spl-danger-text) !important;
+  animation: timerUrgent 0.8s infinite ease-in-out;
+}
+
+/* ==========================================
+   12. ACCESSIBILITY & REDUCED MOTION
+   ========================================== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

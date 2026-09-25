@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — {{ event_name }} Panel{% endblock %}
+
+{% block content_wrapper %}
+<div class="d-flex flex-column flex-lg-row">
+    <!-- Sidebar Navigation -->
+    <div class="spl-sidebar">
+        <div class="spl-brand">
+            <i class="fa-solid fa-gavel text-cyan me-2"></i>{{ event_name }} <span class="spl-accent">ADMIN</span>
+        </div>
+        <div class="spl-nav">
+            <a href="{{ url_for('admin.dashboard') }}" class="spl-nav-item active">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.players') }}" class="spl-nav-item">
+                <i class="fa-solid fa-users"></i> Players
+            </a>
+            <a href="{{ url_for('admin.franchises') }}" class="spl-nav-item">
+                <i class="fa-solid fa-shield-halved"></i> Franchises
+            </a>
+            <a href="{{ url_for('admin.auction_control') }}" class="spl-nav-item">
+                <i class="fa-solid fa-gavel"></i> Primary Auction
+            </a>
+            <a href="{{ url_for('admin.unsold_players') }}" class="spl-nav-item">
+                <i class="fa-solid fa-user-slash"></i> Unsold Players
+            </a>
+            <a href="{{ url_for('admin.second_chance_dashboard') }}" class="spl-nav-item">
+                <i class="fa-solid fa-rotate-right"></i> Second Chance
+            </a>
+            <a href="{{ url_for('admin.final_squads') }}" class="spl-nav-item">
+                <i class="fa-solid fa-people-group"></i> Final Squads
+            </a>
+            <a href="{{ url_for('admin.fixtures_management') }}" class="spl-nav-item">
+                <i class="fa-solid fa-calendar-days"></i> Fixtures
+            </a>
+            <a href="{{ url_for('admin.audit_logs') }}" class="spl-nav-item">
+                <i class="fa-solid fa-clipboard-list"></i> Audit Logs
+            </a>
+            <a href="{{ url_for('admin.users_management') }}" class="spl-nav-item">
+                <i class="fa-solid fa-user-gear"></i> Users & Security
+            </a>
+            <a href="{{ url_for('admin.system_health_dashboard') }}" class="spl-nav-item">
+                <i class="fa-solid fa-heart-pulse"></i> System Health
+            </a>
+            <a href="{{ url_for('admin.settings') }}" class="spl-nav-item">
+                <i class="fa-solid fa-gears"></i> Settings
+            </a>
+        </div>
+        <div class="p-3 border-top border-secondary">
+            <a href="{{ url_for('auth.logout') }}" class="spl-nav-item text-danger p-0">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="spl-content flex-grow-1">
+        <!-- Header Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
+            <div>
+                <h2 class="fw-bold text-white mb-0">SPL Admin Control Center</h2>
+                <small class="text-muted">{{ event_subtitle }} Administrator Dashboard</small>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-outline-warning btn-sm">
+                    <i class="fa-solid fa-clipboard-list me-1"></i> VIEW AUDIT LOGS
+                </a>
+                <a href="{{ url_for('live.auction_live') }}" target="_blank" class="btn btn-outline-info btn-sm">
+                    <i class="fa-solid fa-tv me-1"></i> Live Screen
+                </a>
+                <span class="badge badge-status-waiting fs-6">
+                    <i class="fa-solid fa-clock me-1"></i> AUCTION: {{ auction_status }}
+                </span>
+            </div>
+        </div>
+
+        <!-- 1. Clickable Summary Cards Grid -->
+        <div class="row g-4 mb-4">
+            <!-- Franchises -->
+            <div class="col-md-6 col-xl-3">
+                <a href="{{ url_for('admin.franchises') }}" class="text-decoration-none">
+                    <div class="spl-card h-100 hover-border-cyan transition-all cursor-pointer">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="text-muted small fw-bold">FRANCHISES</span>
+                            <div class="p-2 rounded bg-dark text-warning"><i class="fa-solid fa-shield-halved"></i></div>
+                        </div>
+                        <h3 class="fw-bold text-white mb-1">{{ total_franchises }}</h3>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">{{ active_franchises_count }} Active</small>
+                            <span class="text-cyan small fw-semibold">View Details <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Total Players -->
+            <div class="col-md-6 col-xl-3">
+                <a href="{{ url_for('admin.players') }}" class="text-decoration-none">
+                    <div class="spl-card h-100 hover-border-cyan transition-all cursor-pointer">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="text-muted small fw-bold">TOTAL PLAYERS</span>
+                            <div class="p-2 rounded bg-dark text-cyan"><i class="fa-solid fa-users"></i></div>
+                        </div>
+                        <h3 class="fw-bold text-white mb-1">{{ total_players }}</h3>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">{{ available_players }} Available</small>
+                            <span class="text-cyan small fw-semibold">View Players <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Sold Players -->
+            <div class="col-md-6 col-xl-3">
+                <a href="{{ url_for('admin.players', status='SOLD') }}" class="text-decoration-none">
+                    <div class="spl-card h-100 hover-border-cyan transition-all cursor-pointer">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="text-muted small fw-bold">SOLD</span>
+                            <div class="p-2 rounded bg-dark text-success"><i class="fa-solid fa-user-tag"></i></div>
+                        </div>
+                        <h3 class="fw-bold text-success mb-1">{{ sold_players }}</h3>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Acquired by teams</small>
+                            <span class="text-success small fw-semibold">View Sold <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Unsold Players -->
+            <div class="col-md-6 col-xl-3">
+                <a href="{{ url_for('admin.players', status='UNSOLD') }}" class="text-decoration-none">
+                    <div class="spl-card h-100 hover-border-cyan transition-all cursor-pointer">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="text-muted small fw-bold">UNSOLD</span>
+                            <div class="p-2 rounded bg-dark text-danger"><i class="fa-solid fa-user-xmark"></i></div>
+                        </div>
+                        <h3 class="fw-bold text-danger mb-1">{{ unsold_players }}</h3>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Eligible for second chance</small>
+                            <span class="text-danger small fw-semibold">View Unsold <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- 2. Live Auction Status Banner -->
+        <div class="spl-card mb-4 bg-dark-gradient border-cyan">
+            <div class="row align-items-center g-3">
+                <div class="col-md-3">
+                    <span class="text-muted small fw-bold d-block text-uppercase">CURRENT PLAYER</span>
+                    <h4 class="fw-bold text-white mb-0">
+                        {% if active_player %}
+                            {{ active_player.name }} <small class="text-muted">({{ active_player.roll_number }})</small>
+                        {% else %}
+                            <span class="text-muted fs-6">No Active Player</span>
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="col-md-3">
+                    <span class="text-muted small fw-bold d-block text-uppercase">CURRENT BID</span>
+                    <h3 class="fw-bold text-gold mb-0">
+                        {% if auction_state and auction_state.current_bid %}
+                            {{ auction_state.current_bid | currency }}
+                        {% else %}
+                            <span class="text-muted fs-6">₹0</span>
+                        {% endif %}
+                    </h3>
+                </div>
+                <div class="col-md-3">
+                    <span class="text-muted small fw-bold d-block text-uppercase">HIGHEST BIDDER</span>
+                    <h5 class="fw-bold text-cyan mb-0">
+                        {% if highest_bidder %}
+                            <i class="fa-solid fa-shield-halved me-1"></i>{{ highest_bidder.name }}
+                        {% else %}
+                            <span class="text-muted fs-6">None</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="col-md-3 text-md-end">
+                    <a href="{{ url_for('admin.auction_control') }}" class="btn btn-spl-primary btn-sm">
+                        <i class="fa-solid fa-gavel me-1"></i> Open Auction Engine
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Franchise Overview Grid -->
+        <div class="row g-4 mb-4">
+            <div class="col-12 d-flex justify-content-between align-items-center">
+                <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-shield-halved text-cyan me-2"></i>Franchise Overview</h4>
+                <a href="{{ url_for('admin.franchises') }}" class="btn btn-outline-cyan btn-sm"><i class="fa-solid fa-gear me-1"></i>Manage Franchises</a>
+            </div>
+            {% for f in all_franchises %}
+            <div class="col-md-6 col-xl-4">
+                <a href="{{ url_for('admin.inspect_franchise', id=f.id) }}" class="text-decoration-none">
+                    <div class="spl-card h-100 hover-border-cyan transition-all cursor-pointer">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <img src="{{ url_for('static', filename='uploads/' + (f.logo or 'default_logo.png')) }}" alt="{{ f.name }}" class="rounded bg-dark border border-secondary p-1" style="width: 50px; height: 50px; object-fit: contain;">
+                            <div>
+                                <h5 class="fw-bold text-white mb-0">{{ f.name }} <span class="badge bg-primary text-uppercase fs-8">{{ f.short_name }}</span></h5>
+                                <small class="text-muted"><i class="fa-solid fa-user-tie me-1"></i>{{ f.owner_name or 'Franchise Representative' }}</small>
+                            </div>
+                        </div>
+                        <div class="p-2 rounded bg-dark border border-secondary mb-3 small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Owner Email:</span>
+                                <span class="text-cyan font-monospace fw-semibold">{{ f.authorized_email or 'Not Authorized' }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Google Login:</span>
+                                {% if f.google_auth_enabled and f.authorized_email %}
+                                    <span class="badge bg-success-subtle text-success border border-success"><i class="fa-brands fa-google me-1"></i>CONNECTED</span>
+                                {% else %}
+                                    <span class="badge bg-secondary"><i class="fa-solid fa-lock me-1"></i>DISABLED</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row text-center g-2 small">
+                            <div class="col-4">
+                                <div class="p-2 bg-dark rounded">
+                                    <span class="text-muted d-block fs-8">SQUAD</span>
+                                    <span class="fw-bold text-white fs-6">{{ f.squad_count }} / {{ f.squad_limit }}</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 bg-dark rounded">
+                                    <span class="text-muted d-block fs-8">SPENT</span>
+                                    <span class="fw-bold text-danger fs-7">{{ f.spent_purse | currency }}</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 bg-dark rounded">
+                                    <span class="text-muted d-block fs-8">PURSE REMAINING</span>
+                                    <span class="fw-bold text-gold fs-7">{{ f.remaining_purse | currency }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 4. System Status & Recent Audit Events -->
+        <div class="row g-4 mb-4">
+            <!-- System Status -->
+            <div class="col-lg-5">
+                <div class="spl-card h-100">
+                    <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-server text-info me-2"></i>System Status</h5>
+                    <div class="divide-y divide-secondary">
+                        <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
+                            <span class="text-muted">Database Engine:</span>
+                            <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>SQLite Active</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
+                            <span class="text-muted">Google OAuth Identity:</span>
+                            <span class="badge bg-info"><i class="fa-brands fa-google me-1"></i>Google Identity Services</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
+                            <span class="text-muted">Auction Engine:</span>
+                            <span class="badge bg-primary"><i class="fa-solid fa-gavel me-1"></i>Realtime Operational</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
+                            <span class="text-muted">Audit Logging:</span>
+                            <span class="badge bg-warning text-dark"><i class="fa-solid fa-shield-halved me-1"></i>Append-Only Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Audit Events -->
+            <div class="col-lg-7">
+                <div class="spl-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-clock-rotate-left text-warning me-2"></i>Recent Audit Events</h5>
+                        <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-outline-warning btn-sm py-1 px-2 fs-7">
+                            <i class="fa-solid fa-list me-1"></i> View All Audit Logs
+                        </a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-sm align-middle mb-0">
+                            <thead class="text-muted small">
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Actor</th>
+                                    <th>Action</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for event in recent_audit_events %}
+                                <tr>
+                                    <td class="small text-muted">{{ event.created_at.strftime('%H:%M:%S') }}</td>
+                                    <td class="small text-white">
+                                        {% if event.admin %}
+                                            {{ event.admin.display_name or event.admin.username }}
+                                        {% elif event.franchise %}
+                                            {{ event.franchise.short_name }} Owner
+                                        {% else %}
+                                            System
+                                        {% endif %}
+                                    </td>
+                                    <td><code class="text-cyan small">{{ event.action }}</code></td>
+                                    <td>
+                                        {% if event.status == 'SUCCESS' %}
+                                            <span class="badge bg-success-subtle text-success fs-8">SUCCESS</span>
+                                        {% else %}
+                                            <span class="badge bg-danger-subtle text-danger fs-8">{{ event.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-muted text-center py-3">No recent events.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
