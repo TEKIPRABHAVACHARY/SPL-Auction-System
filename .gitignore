@@ -48,12 +48,10 @@ coverage.xml
 .pytest_cache/
 pytestdebug.log
 
-# Flask instance folder & SQLite DB
+# Flask instance folder, JSON data & backups
 instance/*
 !instance/.gitkeep
-*.db
-*.sqlite
-*.sqlite3
+instance/test_data/
 
 # Environments
 .env

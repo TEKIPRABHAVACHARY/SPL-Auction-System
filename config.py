@@ -1,12 +1,12 @@
 import os
+from dotenv import load_dotenv
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'spl-auction-secret-key-2026-sphoorthy'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'spl_auction.db')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    JSON_DATA_DIR = os.environ.get('JSON_DATA_DIR') or os.path.join(BASE_DIR, 'instance', 'data')
     WTF_CSRF_ENABLED = True
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload size
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'app', 'static', 'uploads')
@@ -22,7 +22,7 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    JSON_DATA_DIR = os.path.join(BASE_DIR, 'instance', 'test_data')
     WTF_CSRF_ENABLED = False
     GOOGLE_CLIENT_ID = 'TEST_GOOGLE_CLIENT_ID'
     GOOGLE_CLIENT_SECRET = 'TEST_GOOGLE_CLIENT_SECRET'

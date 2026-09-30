@@ -1,8 +1,8 @@
-from flask_sqlalchemy import SQLAlchemy
+from app.storage import JSONDB
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 
-db = SQLAlchemy()
+db = JSONDB()
 login_manager = LoginManager()
 csrf = CSRFProtect()
 

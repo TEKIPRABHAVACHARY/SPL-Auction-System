@@ -58,7 +58,7 @@ If a mismatch is detected, the system displays **`PURSE INTEGRITY ERROR`** or **
 ## 5. System Health Engine (`/admin/system/health`)
 
 Monitors operational health across 9 core subsystems:
-1. **Database**: SQLite connection check.
+1. **Storage**: JSON data storage verification.
 2. **Authentication**: Admin & franchise user account status.
 3. **Auction Engine**: Active state validity.
 4. **Purse Engine**: Mathematical balance verification.
@@ -70,7 +70,7 @@ Monitors operational health across 9 core subsystems:
 
 ---
 
-## 6. Database Snapshot Backup & Recovery (`/admin/backup`)
+## 6. Storage Snapshot Backup & Recovery (`/admin/backup`)
 
 - **Create Backup**: Instantly creates a timestamped snapshot in `instance/backups/`.
 - **Restore Backup**: Restores previous database snapshot after explicit admin confirmation modal dialog. Safety backup is automatically created prior to restoring.

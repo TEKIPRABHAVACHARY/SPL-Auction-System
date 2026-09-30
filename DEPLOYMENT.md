@@ -66,7 +66,7 @@ from app.services.seed_service import seed_database
 
 application = create_app('prod')
 
-# Initialize DB tables & seed admin/franchises automatically
+# Initialize JSON storage & seed admin/franchises automatically
 with application.app_context():
     from app.extensions import db
     db.create_all()
@@ -85,7 +85,7 @@ On the **Web** tab, configure static file mappings so CSS/JS assets serve direct
 
 ---
 
-## 6. Initial Database & Admin Setup
+## 6. Initial Storage & Admin Setup
 
 Execute the initial database seed command in Bash console:
 

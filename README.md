@@ -9,7 +9,7 @@ The application supports real-time live bidding, physical chit-selection anchor 
 
 ## Technical Stack & Architecture
 - **Backend Framework**: Python / Flask (App Factory Pattern)
-- **Database**: SQLite with SQLAlchemy ORM
+- **Data Storage**: Pure JSON File-Based Storage (Zero SQL / DB Dependency)
 - **Session & Auth**: Flask-Login, Werkzeug password hashing (HttpOnly, CSRF-protected sessions)
 - **Realtime Updates**: Vanilla JavaScript HTTP Polling (Lightweight, 100% PythonAnywhere WSGI Compatible)
 - **Frontend**: HTML5, Vanilla CSS, Bootstrap 5, Modern SVG & Visual Badges
@@ -106,7 +106,7 @@ App will be accessible at: `http://127.0.0.1:5000/`
 ### 5. System Health, Audit, & Backup / Recovery
 - `/admin/system/health`: 9-subsystem real-time diagnostic health engine.
 - `/admin/system/auction-check`: Mathematical purse integrity & squad audit tool.
-- `/admin/backup`: Safe SQLite database snapshots and confirmed restore operations.
+- `/admin/backup`: Safe JSON storage snapshot backups and confirmed restore operations.
 
 ---
 

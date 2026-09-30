@@ -1,8 +1,10 @@
 import os
+import json
 import shutil
 from datetime import datetime
 from flask import current_app
 from app.services.audit_service import log_audit
+from app.extensions import db
 
 def get_backup_dir():
     """Get or create non-public backup directory in instance_path."""
@@ -10,30 +12,38 @@ def get_backup_dir():
     os.makedirs(backup_dir, exist_ok=True)
     return backup_dir
 
-def get_db_path():
-    """Get path to active SQLite database file."""
-    db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI', '')
-    if db_uri.startswith('sqlite:///'):
-        rel_path = db_uri.replace('sqlite:///', '')
-        if os.path.isabs(rel_path):
-            return rel_path
-        return os.path.join(current_app.root_path, '..', rel_path)
-    return None
+def get_json_data_dir():
+    """Get path to active JSON data storage directory."""
+    return current_app.config.get('JSON_DATA_DIR') or os.path.join(current_app.instance_path, 'data')
 
 def create_database_backup(admin_id=None):
-    """Safely snapshot the SQLite database file into instance/backups directory."""
+    """Safely snapshot the JSON storage files into instance/backups directory."""
     backup_dir = get_backup_dir()
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"spl_backup_{timestamp}.db"
+    filename = f"spl_backup_{timestamp}.json"
     dest_path = os.path.join(backup_dir, filename)
 
-    db_path = get_db_path()
-    if db_path and os.path.exists(db_path):
-        shutil.copy2(db_path, dest_path)
-    else:
-        # Fallback for testing / in-memory DB snapshot
-        with open(dest_path, 'wb') as f:
-            f.write(b'SPL_MOCK_DATABASE_SNAPSHOT')
+    data_dir = get_json_data_dir()
+    tables_data = {}
+    if os.path.exists(data_dir):
+        for f in os.listdir(data_dir):
+            if f.endswith('.json'):
+                t_name = f[:-5]
+                f_path = os.path.join(data_dir, f)
+                try:
+                    with open(f_path, 'r', encoding='utf-8') as jf:
+                        tables_data[t_name] = json.load(jf)
+                except Exception:
+                    tables_data[t_name] = []
+
+    backup_payload = {
+        'version': '2.0-json',
+        'timestamp': datetime.utcnow().isoformat(),
+        'tables': tables_data
+    }
+
+    with open(dest_path, 'w', encoding='utf-8') as f:
+        json.dump(backup_payload, f, indent=2, ensure_ascii=False)
 
     log_audit(admin_id, 'DATABASE_BACKUP_CREATED', 'System', None, None, f"Created backup: {filename}")
     return filename
@@ -41,7 +51,7 @@ def create_database_backup(admin_id=None):
 def list_backups():
     """List available backups with file size and timestamp."""
     backup_dir = get_backup_dir()
-    files = [f for f in os.listdir(backup_dir) if f.endswith('.db')]
+    files = [f for f in os.listdir(backup_dir) if f.endswith('.json') or f.endswith('.db')]
     files.sort(reverse=True)
 
     backups = []
@@ -57,7 +67,7 @@ def list_backups():
     return backups
 
 def restore_database_backup(filename, admin_id=None, confirmation_reason=None):
-    """Restore database from backup file safely after explicit admin confirmation."""
+    """Restore JSON storage from backup file safely after explicit admin confirmation."""
     if not confirmation_reason or not confirmation_reason.strip():
         raise ValueError("Confirmation reason is required to restore database backup.")
 
@@ -66,14 +76,45 @@ def restore_database_backup(filename, admin_id=None, confirmation_reason=None):
     if not os.path.exists(backup_path):
         raise ValueError(f"Backup file '{filename}' does not exist.")
 
-    db_path = get_db_path()
-    if not db_path:
-        raise ValueError("Cannot locate target database file path.")
+    data_dir = get_json_data_dir()
+    os.makedirs(data_dir, exist_ok=True)
 
     # Create safety snapshot before overwriting
     create_database_backup(admin_id)
 
-    # Overwrite DB file
-    shutil.copy2(backup_path, db_path)
+    if filename.endswith('.json'):
+        with open(backup_path, 'r', encoding='utf-8') as f:
+            backup_payload = json.load(f)
+
+        tables = backup_payload.get('tables', {})
+        for t_name, rows in tables.items():
+            t_path = os.path.join(data_dir, f"{t_name}.json")
+            db.engine._atomic_write_json(t_path, rows)
+
+        # Clear in-memory caches and reload
+        db.engine._tables.clear()
+        db.engine._dirty_tables.clear()
+        db.engine._max_ids.clear()
+        db.session._identity_map.clear()
+        db.create_all()
+    elif filename.endswith('.db'):
+        # Legacy SQLite backup migration fallback
+        import sqlite3
+        conn = sqlite3.connect(backup_path)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = [r[0] for r in cur.fetchall() if not r[0].startswith('sqlite_')]
+        for t in tables:
+            cur.execute(f"SELECT * FROM {t};")
+            rows = [dict(r) for r in cur.fetchall()]
+            t_path = os.path.join(data_dir, f"{t}.json")
+            db.engine._atomic_write_json(t_path, rows)
+        conn.close()
+        db.engine._tables.clear()
+        db.engine._dirty_tables.clear()
+        db.session._identity_map.clear()
+        db.create_all()
+
     log_audit(admin_id, 'DATABASE_RESTORED', 'System', None, None, f"Restored from {filename}. Reason: {confirmation_reason}")
     return True

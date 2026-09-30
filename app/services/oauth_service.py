@@ -1,9 +1,13 @@
-from authlib.integrations.flask_client import OAuth
-
-oauth = OAuth()
+try:
+    from authlib.integrations.flask_client import OAuth
+    oauth = OAuth()
+except ImportError:
+    oauth = None
 
 def init_oauth(app):
     """Register Google OAuth client with Flask app."""
+    if oauth is None:
+        return
     oauth.init_app(app)
     
     # Avoid network calls during testing unless explicitly configured

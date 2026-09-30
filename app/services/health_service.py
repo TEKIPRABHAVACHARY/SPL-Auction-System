@@ -10,29 +10,29 @@ def check_system_health():
     Check operational health of all 9 core subsystems.
     Returns dict of subsystem health status (OK / WARNING / ERROR) and details.
     """
-    health = {}
+    subsystems = {}
 
-    # 1. Database
+    # 1. JSON Data Storage
     try:
         db.session.execute(db.select(1)).scalar()
-        health['database'] = {'status': 'OK', 'msg': 'Database connected successfully.'}
+        subsystems['database'] = {'status': 'OK', 'details': 'JSON Data Storage connected and verified.', 'msg': 'JSON Data Storage connected and verified.'}
     except Exception as e:
-        health['database'] = {'status': 'ERROR', 'msg': f'Database failure: {str(e)}'}
+        subsystems['database'] = {'status': 'ERROR', 'details': f'JSON storage failure: {str(e)}', 'msg': f'JSON storage failure: {str(e)}'}
 
     # 2. Authentication
     admin_count = User.query.filter_by(role='ADMIN', is_active=True).count()
     franchise_user_count = User.query.filter_by(role='FRANCHISE', is_active=True).count()
     if admin_count >= 1 and franchise_user_count >= 1:
-        health['authentication'] = {'status': 'OK', 'msg': f'{admin_count} Admin, {franchise_user_count} Franchise user accounts configured.'}
+        subsystems['authentication'] = {'status': 'OK', 'details': f'{admin_count} Admin, {franchise_user_count} Franchise user accounts configured.', 'msg': f'{admin_count} Admin, {franchise_user_count} Franchise user accounts configured.'}
     else:
-        health['authentication'] = {'status': 'WARNING', 'msg': 'Missing active admin or franchise users.'}
+        subsystems['authentication'] = {'status': 'WARNING', 'details': 'Missing active admin or franchise users.', 'msg': 'Missing active admin or franchise users.'}
 
     # 3. Auction Engine
     state = AuctionState.query.first()
     if state and state.status in AuctionStatus.VALID_STATES:
-        health['auction_engine'] = {'status': 'OK', 'msg': f'Auction engine active in status: {state.status}'}
+        subsystems['auction_engine'] = {'status': 'OK', 'details': f'Auction engine active in status: {state.status}', 'msg': f'Auction engine active in status: {state.status}'}
     else:
-        health['auction_engine'] = {'status': 'ERROR', 'msg': 'AuctionState record invalid or missing.'}
+        subsystems['auction_engine'] = {'status': 'ERROR', 'details': 'AuctionState record invalid or missing.', 'msg': 'AuctionState record invalid or missing.'}
 
     # 4. Purse Engine
     franchises = Franchise.query.filter_by(is_active=True).all()
@@ -42,9 +42,9 @@ def check_system_health():
         if abs(f.remaining_purse - (f.starting_purse - spent)) > 0.01:
             purse_errors.append(f.name)
     if not purse_errors:
-        health['purse_engine'] = {'status': 'OK', 'msg': f'All {len(franchises)} franchise purses verified.'}
+        subsystems['purse_engine'] = {'status': 'OK', 'details': f'All {len(franchises)} franchise purses verified.', 'msg': f'All {len(franchises)} franchise purses verified.'}
     else:
-        health['purse_engine'] = {'status': 'ERROR', 'msg': f'Purse calculation mismatch in: {", ".join(purse_errors)}'}
+        subsystems['purse_engine'] = {'status': 'ERROR', 'details': f'Purse calculation mismatch in: {", ".join(purse_errors)}', 'msg': f'Purse calculation mismatch in: {", ".join(purse_errors)}'}
 
     # 5. Squad Engine
     squad_errors = []
@@ -52,28 +52,41 @@ def check_system_health():
         if f.squad_count > f.squad_limit:
             squad_errors.append(f.name)
     if not squad_errors:
-        health['squad_engine'] = {'status': 'OK', 'msg': 'All squad limits respected.'}
+        subsystems['squad_engine'] = {'status': 'OK', 'details': 'All squad limits respected.', 'msg': 'All squad limits respected.'}
     else:
-        health['squad_engine'] = {'status': 'ERROR', 'msg': f'Squad capacity exceeded in: {", ".join(squad_errors)}'}
+        subsystems['squad_engine'] = {'status': 'ERROR', 'details': f'Squad capacity exceeded in: {", ".join(squad_errors)}', 'msg': f'Squad capacity exceeded in: {", ".join(squad_errors)}'}
 
     # 6. Fixture Engine
     fixture_count = Fixture.query.count()
     published_count = Fixture.query.filter_by(is_published=True).count()
-    health['fixture_engine'] = {'status': 'OK', 'msg': f'{fixture_count} fixtures generated ({published_count} published).'}
+    subsystems['fixture_engine'] = {'status': 'OK', 'details': f'{fixture_count} fixtures generated ({published_count} published).', 'msg': f'{fixture_count} fixtures generated ({published_count} published).'}
 
     # 7. Audit Log
     log_count = AuditLog.query.count()
-    health['audit_log'] = {'status': 'OK', 'msg': f'{log_count} audit event records stored.'}
+    subsystems['audit_log'] = {'status': 'OK', 'details': f'{log_count} audit event records stored.', 'msg': f'{log_count} audit event records stored.'}
 
     # 8. Static Files
-    upload_folder = getattr(db, 'upload_folder', None)
-    health['static_files'] = {'status': 'OK', 'msg': 'Static assets and upload storage ready.'}
+    subsystems['static_files'] = {'status': 'OK', 'details': 'Static assets and upload storage ready.', 'msg': 'Static assets and upload storage ready.'}
 
     # 9. Configuration
     event_name = SystemSettings.get_setting('event_name')
-    health['configuration'] = {'status': 'OK', 'msg': f'Configured for: {event_name}'}
+    subsystems['configuration'] = {'status': 'OK', 'details': f'Configured for: {event_name}', 'msg': f'Configured for: {event_name}'}
 
-    return health
+    overall = 'OK'
+    for s in subsystems.values():
+        if s['status'] == 'ERROR':
+            overall = 'ERROR'
+            break
+        elif s['status'] == 'WARNING' and overall != 'ERROR':
+            overall = 'WARNING'
+
+    result = {
+        'overall': overall,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'subsystems': subsystems,
+    }
+    result.update(subsystems)
+    return result
 
 def run_deep_auction_check():
     """
