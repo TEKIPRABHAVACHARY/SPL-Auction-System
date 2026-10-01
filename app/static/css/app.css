@@ -1157,4 +1157,64 @@ a:hover {
   }
 }
 
+/* ==========================================
+   LOGIN SCREEN (SLEEK GLASSMORPHISM, NO ASH GREY)
+   ========================================== */
+.spl-login-wrapper {
+  background: radial-gradient(ellipse at 50% 25%, rgba(30, 64, 175, 0.3) 0%, rgba(15, 23, 42, 0.95) 75%), var(--spl-bg-main);
+  min-height: 100vh;
+}
+
+.spl-login-emblem {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(56, 189, 248, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.spl-login-emblem:hover {
+  transform: scale(1.05);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45), 0 0 30px rgba(253, 185, 19, 0.3);
+}
+
+.spl-login-card {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.55), 0 0 50px rgba(30, 64, 175, 0.2) !important;
+  color: #ffffff;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.spl-login-card:hover {
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.65), 0 0 60px rgba(56, 189, 248, 0.25) !important;
+}
+
+.btn-google-signin-clean {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #ffffff !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.btn-google-signin-clean:hover {
+  background: #f8fafc !important;
+  color: #0284c7 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 24px rgba(56, 189, 248, 0.35);
+}
+
+.btn-google-signin-clean:active {
+  transform: translateY(0);
+}
+
+
 
