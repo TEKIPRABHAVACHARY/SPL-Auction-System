@@ -6,7 +6,7 @@
 <div class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-sliders text-warning me-2"></i>Event Control Panel</h2>
+            <h2><i class="bi bi-sliders text-danger me-2"></i>Event Control Panel</h2>
             <p class="text-muted mb-0">Master control panel for physical auction day operations</p>
         </div>
         <div>
@@ -17,9 +17,9 @@
     </div>
 
     <!-- Quick Actions based on State -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-dark text-white fw-bold">
-            <i class="bi bi-play-circle me-2"></i>Global Action Controls
+    <div class="card shadow-sm border-0 mb-4 bg-white">
+        <div class="card-header bg-light text-dark fw-bold border-bottom border-secondary-subtle">
+            <i class="bi bi-play-circle text-danger me-2"></i>Global Action Controls
         </div>
         <div class="card-body">
             <form method="POST" action="{{ url_for('admin.update_event_state') }}" class="row row-cols-lg-auto g-3 align-items-center">
@@ -39,7 +39,7 @@
                     </select>
                 </div>
                 <div class="col-12">
-                    <button type="submit" class="btn btn-warning fw-bold">
+                    <button type="submit" class="btn btn-danger fw-bold shadow-sm">
                         <i class="bi bi-check-circle me-1"></i>Update Event State
                     </button>
                 </div>
@@ -86,10 +86,10 @@
                     {% endif %}
                 </div>
                 <div class="card-footer bg-body d-flex justify-content-between">
-                    <a href="{{ url_for('admin.auction') }}" class="btn btn-sm btn-primary">
+                    <a href="{{ url_for('admin.auction_control') }}" class="btn btn-sm btn-danger fw-bold shadow-sm">
                         <i class="bi bi-hammer me-1"></i>Go to Auction Control
                     </a>
-                    <a href="{{ url_for('main.projector') }}" target="_blank" class="btn btn-sm btn-outline-info">
+                    <a href="{{ url_for('live.auction_live') }}" target="_blank" class="btn btn-sm btn-outline-danger">
                         <i class="bi bi-projector me-1"></i>Open Projector View
                     </a>
                 </div>
@@ -98,9 +98,9 @@
 
         <!-- Squad & Purse Summary -->
         <div class="col-md-6">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="card-header bg-body fw-bold">
-                    <i class="bi bi-shield-check me-2"></i>Franchise & Squad Overview
+            <div class="card h-100 shadow-sm border-0 bg-white">
+                <div class="card-header bg-light text-dark fw-bold border-bottom border-secondary-subtle">
+                    <i class="bi bi-shield-check text-primary me-2"></i>Franchise & Squad Overview
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -117,7 +117,7 @@
                                 <tr>
                                     <td class="fw-bold">{{ item.franchise.name }}</td>
                                     <td>
-                                        <span class="badge {% if item.squad_count >= 14 and item.squad_count <= 15 %}bg-success{% elif item.squad_count < 14 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                        <span class="badge {% if item.squad_count >= 14 and item.squad_count <= 15 %}bg-success{% elif item.squad_count < 14 %}bg-primary{% else %}bg-danger{% endif %}">
                                             {{ item.squad_count }} / 15
                                         </span>
                                     </td>
@@ -133,7 +133,7 @@
                     </div>
                 </div>
                 <div class="card-footer bg-body">
-                    <a href="{{ url_for('admin.auction_check') }}" class="btn btn-sm btn-outline-secondary">
+                    <a href="{{ url_for('admin.auction_integrity_audit') }}" class="btn btn-sm btn-outline-danger">
                         <i class="bi bi-clipboard-check me-1"></i>Run Full Integrity Check
                     </a>
                 </div>

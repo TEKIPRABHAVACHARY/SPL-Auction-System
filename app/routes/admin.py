@@ -1376,27 +1376,51 @@ def auction_integrity_audit():
 @login_required
 @admin_required
 def event_control_panel():
-    state = AuctionState.query.first()
-    player = Player.query.get(state.active_player_id) if state and state.active_player_id else None
-    highest_bidder = Franchise.query.get(state.highest_bidder_id) if state and state.highest_bidder_id else None
+    state_obj = AuctionState.query.first()
+    player = Player.query.get(state_obj.active_player_id) if state_obj and state_obj.active_player_id else None
+    highest_bidder = Franchise.query.get(state_obj.highest_bidder_id) if state_obj and state_obj.highest_bidder_id else None
 
     total_sold = Player.query.filter_by(status=PlayerStatus.SOLD).count()
     total_unsold = Player.query.filter_by(status=PlayerStatus.UNSOLD).count()
     is_sc = SystemSettings.get_setting('second_chance_active') == 'true'
     is_locked = SystemSettings.get_setting('squads_locked') == 'true'
     fixtures_published = Fixture.query.filter_by(is_published=True).count() > 0
+    event_state = SystemSettings.get_setting('event_state', 'SETUP')
+
+    franchises = Franchise.query.all()
+    squad_stats = []
+    for f in franchises:
+        squad_stats.append({
+            'franchise': f,
+            'squad_count': f.squad_count,
+            'remaining_purse': f.remaining_purse
+        })
 
     return render_template(
         'admin/event_control.html',
-        state=state,
-        player=player,
+        state=event_state,
+        current_player=player,
+        current_bid=state_obj.current_bid if state_obj else 0,
         highest_bidder=highest_bidder,
         total_sold=total_sold,
         total_unsold=total_unsold,
         is_sc=is_sc,
         is_locked=is_locked,
-        fixtures_published=fixtures_published
+        fixtures_published=fixtures_published,
+        squad_stats=squad_stats
     )
+
+
+@admin_bp.route('/event-control/state', methods=['POST'])
+@login_required
+@admin_required
+def update_event_state():
+    new_state = request.form.get('state')
+    if new_state:
+        SystemSettings.set_setting('event_state', new_state)
+        log_audit(current_user.id, 'UPDATE_EVENT_STATE', 'SystemSettings', None, None, f"Event state updated to {new_state}")
+        flash(f"Event state successfully updated to {new_state}", "success")
+    return redirect(url_for('admin.event_control_panel'))
 
 # 6. DATABASE BACKUP & RESTORE
 @admin_bp.route('/backup', methods=['GET'])

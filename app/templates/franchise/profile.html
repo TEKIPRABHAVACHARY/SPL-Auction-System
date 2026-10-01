@@ -5,19 +5,19 @@
 {% block content_wrapper %}
 <div class="container py-3">
     <!-- Header Bar & Sub-Navigation -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary gap-3">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom gap-3">
         <div class="d-flex align-items-center gap-3">
             {% if franchise.logo and franchise.logo.startswith('http') %}
-                <img src="{{ franchise.logo }}" alt="{{ franchise.name }}" class="rounded-circle border border-cyan border-2 bg-dark p-1" style="width: 54px; height: 54px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
+                <img src="{{ franchise.logo }}" alt="{{ franchise.name }}" class="rounded-circle border border-danger border-2 bg-light p-1" style="width: 54px; height: 54px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
             {% else %}
-                <img src="{{ url_for('static', filename='uploads/' + (franchise.logo or 'default_logo.png')) }}" alt="{{ franchise.name }}" class="rounded-circle border border-cyan border-2 bg-dark p-1" style="width: 54px; height: 54px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
+                <img src="{{ url_for('static', filename='uploads/' + (franchise.logo or 'default_logo.png')) }}" alt="{{ franchise.name }}" class="rounded-circle border border-danger border-2 bg-light p-1" style="width: 54px; height: 54px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
             {% endif %}
             <div>
                 <div class="d-flex align-items-center gap-2">
-                    <h2 class="fw-bold text-white mb-0">{{ franchise.name }}</h2>
+                    <h2 class="fw-bold text-dark mb-0">{{ franchise.name }}</h2>
                     <span class="badge bg-primary text-uppercase">{{ franchise.short_name }}</span>
                 </div>
-                <small class="text-muted">Franchisee Profile &bull; Captain Configuration &bull; Registered Gmail: <span class="text-cyan">{{ franchise.authorized_email }}</span></small>
+                <small class="text-muted">Franchisee Profile &bull; Captain Configuration &bull; Registered Gmail: <span class="text-primary">{{ franchise.authorized_email }}</span></small>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -28,14 +28,14 @@
     </div>
 
     <!-- Sub-Navigation Links Bar -->
-    <div class="spl-card p-2 mb-4">
+    <div class="spl-card p-2 mb-4 bg-white shadow-sm border">
         <div class="nav nav-pills gap-1 flex-wrap">
-            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.dashboard') }}"><i class="fa-solid fa-chart-pie me-1"></i> Dashboard</a>
-            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.squad') }}"><i class="fa-solid fa-users me-1"></i> My Squad</a>
-            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.purchases') }}"><i class="fa-solid fa-cart-shopping me-1"></i> Purchases</a>
-            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.bids') }}"><i class="fa-solid fa-list-check me-1"></i> Bid History</a>
-            <a class="nav-link text-white px-3 py-1.5" href="{{ url_for('franchise.activity') }}"><i class="fa-solid fa-timeline me-1"></i> Activity</a>
-            <a class="nav-link active bg-cyan text-dark fw-bold px-3 py-1.5" href="{{ url_for('franchise.profile') }}"><i class="fa-solid fa-id-card me-1"></i> Profile</a>
+            <a class="nav-link text-dark px-3 py-1.5" href="{{ url_for('franchise.dashboard') }}"><i class="fa-solid fa-chart-pie me-1"></i> Dashboard</a>
+            <a class="nav-link text-dark px-3 py-1.5" href="{{ url_for('franchise.squad') }}"><i class="fa-solid fa-users me-1"></i> My Squad</a>
+            <a class="nav-link text-dark px-3 py-1.5" href="{{ url_for('franchise.purchases') }}"><i class="fa-solid fa-cart-shopping me-1"></i> Purchases</a>
+            <a class="nav-link text-dark px-3 py-1.5" href="{{ url_for('franchise.bids') }}"><i class="fa-solid fa-list-check me-1"></i> Bid History</a>
+            <a class="nav-link text-dark px-3 py-1.5" href="{{ url_for('franchise.activity') }}"><i class="fa-solid fa-timeline me-1"></i> Activity</a>
+            <a class="nav-link active bg-danger text-white fw-bold px-3 py-1.5" href="{{ url_for('franchise.profile') }}"><i class="fa-solid fa-id-card me-1"></i> Profile</a>
         </div>
     </div>
 
@@ -43,70 +43,70 @@
         <!-- Left Column: Franchise Info & Captain Card -->
         <div class="col-12 col-lg-4">
             <!-- Current Identity Summary -->
-            <div class="spl-card mb-4 text-center">
+            <div class="spl-card mb-4 text-center bg-white shadow-sm border p-3">
                 <div class="position-relative d-inline-block mb-3">
                     {% if franchise.logo and franchise.logo.startswith('http') %}
-                        <img src="{{ franchise.logo }}" alt="{{ franchise.name }}" class="rounded-circle border border-cyan border-3 shadow bg-dark" style="width: 100px; height: 100px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
+                        <img src="{{ franchise.logo }}" alt="{{ franchise.name }}" class="rounded-circle border border-danger border-3 shadow bg-light" style="width: 100px; height: 100px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
                     {% else %}
-                        <img src="{{ url_for('static', filename='uploads/' + (franchise.logo or 'default_logo.png')) }}" alt="{{ franchise.name }}" class="rounded-circle border border-cyan border-3 shadow bg-dark" style="width: 100px; height: 100px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
+                        <img src="{{ url_for('static', filename='uploads/' + (franchise.logo or 'default_logo.png')) }}" alt="{{ franchise.name }}" class="rounded-circle border border-danger border-3 shadow bg-light" style="width: 100px; height: 100px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
                     {% endif %}
                 </div>
-                <h4 class="fw-bold text-white mb-1">{{ franchise.name }}</h4>
-                <span class="badge bg-secondary font-monospace mb-3">{{ franchise.short_name }}</span>
+                <h4 class="fw-bold text-dark mb-1">{{ franchise.name }}</h4>
+                <span class="badge bg-light text-dark border font-monospace mb-3">{{ franchise.short_name }}</span>
 
                 <div class="row g-2 text-center small mb-3">
                     <div class="col-6">
-                        <div class="p-2 bg-dark rounded border border-secondary">
+                        <div class="p-2 bg-light rounded border">
                             <span class="text-muted extra-small d-block">REMAINING PURSE</span>
                             <strong class="text-success fs-6 font-monospace">₹{{ franchise.remaining_purse | currency }}</strong>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="p-2 bg-dark rounded border border-secondary">
+                        <div class="p-2 bg-light rounded border">
                             <span class="text-muted extra-small d-block">SQUAD SLOTS</span>
-                            <strong class="text-cyan fs-6 font-monospace">{{ franchise.squad_count }}/{{ franchise.squad_limit }}</strong>
+                            <strong class="text-primary fs-6 font-monospace">{{ franchise.squad_count }}/{{ franchise.squad_limit }}</strong>
                         </div>
                     </div>
                 </div>
 
-                <div class="p-2.5 bg-dark border border-secondary rounded text-start small">
+                <div class="p-2.5 bg-light border rounded text-start small">
                     <div class="text-muted extra-small mb-1">REGISTERED GMAIL ACCOUNT:</div>
-                    <div class="text-info font-monospace text-truncate"><i class="fa-brands fa-google text-danger me-1"></i>{{ franchise.authorized_email }}</div>
+                    <div class="text-primary font-monospace text-truncate"><i class="fa-brands fa-google text-danger me-1"></i>{{ franchise.authorized_email }}</div>
                     <div class="text-muted extra-small mt-2 mb-1">OWNER NAME:</div>
-                    <div class="text-white fw-semibold">{{ franchise.owner_name or 'N/A' }}</div>
+                    <div class="text-dark fw-semibold">{{ franchise.owner_name or 'N/A' }}</div>
                 </div>
             </div>
 
             <!-- Current Captain Preview Card -->
-            <div class="spl-card border-top border-warning border-3">
-                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
-                    <h5 class="fw-bold text-warning mb-0"><i class="fa-solid fa-crown me-2"></i>Current Captain</h5>
+            <div class="spl-card border-top border-danger border-3 bg-white shadow-sm border p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <h5 class="fw-bold text-danger mb-0"><i class="fa-solid fa-crown me-2"></i>Current Captain</h5>
                     {% if franchise.captain_rule_number %}
-                        <span class="badge bg-warning text-dark font-monospace fw-bold">#{{ franchise.captain_rule_number }}</span>
+                        <span class="badge bg-danger text-white font-monospace fw-bold">#{{ franchise.captain_rule_number }}</span>
                     {% endif %}
                 </div>
                 <div class="text-center">
                     {% if franchise.captain_photo %}
-                        <img src="{{ url_for('static', filename='uploads/' + franchise.captain_photo) }}" alt="Captain Photo" class="rounded-circle border border-warning border-3 shadow mb-3" style="width: 90px; height: 90px; object-fit: cover;" onerror="this.src='/static/uploads/default_player.png'">
+                        <img src="{{ url_for('static', filename='uploads/' + franchise.captain_photo) }}" alt="Captain Photo" class="rounded-circle border border-danger border-3 shadow mb-3" style="width: 90px; height: 90px; object-fit: cover;" onerror="this.src='/static/uploads/default_player.png'">
                     {% elif franchise.captain and franchise.captain.photo %}
-                        <img src="{{ url_for('static', filename='uploads/' + franchise.captain.photo) if not franchise.captain.photo.startswith('http') else franchise.captain.photo }}" alt="Captain Photo" class="rounded-circle border border-warning border-3 shadow mb-3" style="width: 90px; height: 90px; object-fit: cover;" onerror="this.src='/static/uploads/default_player.png'">
+                        <img src="{{ url_for('static', filename='uploads/' + franchise.captain.photo) if not franchise.captain.photo.startswith('http') else franchise.captain.photo }}" alt="Captain Photo" class="rounded-circle border border-danger border-3 shadow mb-3" style="width: 90px; height: 90px; object-fit: cover;" onerror="this.src='/static/uploads/default_player.png'">
                     {% else %}
-                        <img src="{{ url_for('static', filename='uploads/default_player.png') }}" alt="Captain Photo" class="rounded-circle border border-secondary border-2 mb-3" style="width: 90px; height: 90px; object-fit: cover;">
+                        <img src="{{ url_for('static', filename='uploads/default_player.png') }}" alt="Captain Photo" class="rounded-circle border border-2 mb-3" style="width: 90px; height: 90px; object-fit: cover;">
                     {% endif %}
 
-                    <h5 class="fw-bold text-white mb-1">{{ franchise.captain_name or 'No Captain Set' }}</h5>
+                    <h5 class="fw-bold text-dark mb-1">{{ franchise.captain_name or 'No Captain Set' }}</h5>
                     {% if franchise.captain_category %}
-                        <span class="badge bg-secondary mb-2">{{ franchise.captain_category }}</span>
+                        <span class="badge bg-light text-dark border mb-2">{{ franchise.captain_category }}</span>
                     {% endif %}
 
-                    <div class="p-2 bg-dark rounded border border-secondary text-start small mt-2">
-                        <div class="d-flex justify-content-between py-1 border-bottom border-secondary">
+                    <div class="p-2 bg-light rounded border text-start small mt-2">
+                        <div class="d-flex justify-content-between py-1 border-bottom">
                             <span class="text-muted">Department / Branch:</span>
-                            <strong class="text-light">{{ franchise.captain_department or 'N/A' }}</strong>
+                            <strong class="text-dark">{{ franchise.captain_department or 'N/A' }}</strong>
                         </div>
                         <div class="d-flex justify-content-between py-1">
                             <span class="text-muted">Academic Year:</span>
-                            <strong class="text-light">{{ franchise.captain_year or 'N/A' }}</strong>
+                            <strong class="text-dark">{{ franchise.captain_year or 'N/A' }}</strong>
                         </div>
                     </div>
                 </div>
@@ -115,12 +115,12 @@
 
         <!-- Right Column: Interactive Profile & Captain Edit Form -->
         <div class="col-12 col-lg-8">
-            <div class="spl-card">
-                <div class="spl-card-header d-flex justify-content-between align-items-center">
-                    <h5 class="fw-bold text-white mb-0">
-                        <i class="fa-solid fa-pen-to-square text-cyan me-2"></i>Update Franchisee Profile & Captain
+            <div class="spl-card bg-white shadow-sm border p-4">
+                <div class="spl-card-header pb-3 mb-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold text-dark mb-0">
+                        <i class="fa-solid fa-pen-to-square text-danger me-2"></i>Update Franchisee Profile & Captain
                     </h5>
-                    <span class="badge bg-info">TEAM SELF-SERVICE</span>
+                    <span class="badge bg-primary text-white">TEAM SELF-SERVICE</span>
                 </div>
 
                 <form method="POST" action="{{ url_for('franchise.profile') }}" enctype="multipart/form-data">
@@ -128,8 +128,8 @@
 
                     <!-- Section 1: Captain Information -->
                     <div class="mb-4">
-                        <h6 class="fw-bold text-cyan mb-3 pb-2 border-bottom border-secondary">
-                            <i class="fa-solid fa-user-shield me-2 text-warning"></i>Captain Information
+                        <h6 class="fw-bold text-primary mb-3 pb-2 border-bottom">
+                            <i class="fa-solid fa-user-shield me-2 text-danger"></i>Captain Information
                         </h6>
 
                         <div class="row g-3">
@@ -178,8 +178,8 @@
 
                     <!-- Section 2: Franchise Logo -->
                     <div class="mb-4">
-                        <h6 class="fw-bold text-cyan mb-3 pb-2 border-bottom border-secondary">
-                            <i class="fa-solid fa-image me-2 text-info"></i>Franchisee Branding & Logo
+                        <h6 class="fw-bold text-primary mb-3 pb-2 border-bottom">
+                            <i class="fa-solid fa-image me-2 text-danger"></i>Franchisee Branding & Logo
                         </h6>
 
                         <div class="row g-3">
@@ -197,8 +197,8 @@
                     </div>
 
                     <!-- Read-only Security Notice -->
-                    <div class="p-3 bg-dark rounded border border-secondary mb-4 small text-muted">
-                        <i class="fa-solid fa-lock text-warning me-2"></i>
+                    <div class="p-3 bg-light rounded border mb-4 small text-muted">
+                        <i class="fa-solid fa-lock text-danger me-2"></i>
                         <strong>Locked Parameters:</strong> Franchise Name, Short Code, Registered Gmail, Purse (₹{{ franchise.starting_purse | currency }}), and Squad Limit ({{ franchise.squad_limit }}) can only be adjusted by the SPL Administrator.
                     </div>
 

@@ -6,14 +6,14 @@
 {% block content %}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
     <div>
-        <h2 class="fw-bold text-cyan mb-1"><i class="fa-solid fa-clock-rotate-left me-2"></i>Auction History & Summary</h2>
+        <h2 class="fw-bold text-primary mb-1"><i class="fa-solid fa-clock-rotate-left me-2 text-danger"></i>Auction History & Summary</h2>
         <p class="text-muted small mb-0">Comprehensive record of all bids, player sales, auction rounds, and financial disbursements.</p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
         <a href="{{ url_for('admin.download_auction_report') }}" class="btn btn-success btn-sm fw-bold">
             <i class="fa-solid fa-file-csv me-1"></i>Download CSV Report
         </a>
-        <a href="{{ url_for('admin.final_squads') }}" class="btn btn-outline-info btn-sm fw-bold">
+        <a href="{{ url_for('admin.final_squads') }}" class="btn btn-outline-primary btn-sm fw-bold">
             <i class="fa-solid fa-people-group me-1"></i>Final Squads
         </a>
     </div>
@@ -22,46 +22,46 @@
 <!-- Summary Metric Cards -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-2">
-        <div class="spl-card text-center py-3 border-start border-cyan border-4">
+        <div class="spl-card text-center py-3 border-start border-primary border-4 bg-white shadow-sm">
             <span class="text-muted text-uppercase extra-small fw-bold">Registered</span>
-            <h3 class="fw-bold text-light mb-0 mt-1">{{ total_registered }}</h3>
+            <h3 class="fw-bold text-dark mb-0 mt-1">{{ total_registered }}</h3>
         </div>
     </div>
     <div class="col-6 col-md-2">
-        <div class="spl-card text-center py-3 border-start border-success border-4">
+        <div class="spl-card text-center py-3 border-start border-success border-4 bg-white shadow-sm">
             <span class="text-muted text-uppercase extra-small fw-bold">Total Sold</span>
             <h3 class="fw-bold text-success mb-0 mt-1">{{ total_sold }}</h3>
         </div>
     </div>
     <div class="col-6 col-md-2">
-        <div class="spl-card text-center py-3 border-start border-info border-4">
+        <div class="spl-card text-center py-3 border-start border-primary border-4 bg-white shadow-sm">
             <span class="text-muted text-uppercase extra-small fw-bold">2nd Chance Sold</span>
-            <h3 class="fw-bold text-info mb-0 mt-1">{{ second_chance_sold }}</h3>
+            <h3 class="fw-bold text-primary mb-0 mt-1">{{ second_chance_sold }}</h3>
         </div>
     </div>
     <div class="col-6 col-md-2">
-        <div class="spl-card text-center py-3 border-start border-danger border-4">
+        <div class="spl-card text-center py-3 border-start border-danger border-4 bg-white shadow-sm">
             <span class="text-muted text-uppercase extra-small fw-bold">Final Unsold</span>
             <h3 class="fw-bold text-danger mb-0 mt-1">{{ final_unsold }}</h3>
         </div>
     </div>
     <div class="col-12 col-md-4">
-        <div class="spl-card text-center py-3 border-start border-warning border-4">
+        <div class="spl-card text-center py-3 border-start border-danger border-4 bg-white shadow-sm">
             <span class="text-muted text-uppercase extra-small fw-bold">Total Money Spent</span>
-            <h3 class="fw-bold text-warning mb-0 mt-1">₹ {{ total_money_spent | currency }}</h3>
+            <h3 class="fw-bold text-danger mb-0 mt-1 font-monospace">₹ {{ total_money_spent | currency }}</h3>
         </div>
     </div>
 </div>
 
 <!-- Franchise Financial Breakdown -->
-<div class="spl-card mb-4 p-0 overflow-hidden">
-    <div class="p-3 bg-dark border-bottom border-secondary d-flex justify-content-between align-items-center">
-        <h5 class="fw-bold text-cyan mb-0"><i class="fa-solid fa-building me-2"></i>Franchise Financial Summary</h5>
-        <span class="badge bg-secondary">Real-time Purse Tracking</span>
+<div class="spl-card mb-4 p-0 overflow-hidden bg-white shadow-sm border">
+    <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold text-primary mb-0"><i class="fa-solid fa-building me-2 text-danger"></i>Franchise Financial Summary</h5>
+        <span class="badge bg-primary text-white">Real-time Purse Tracking</span>
     </div>
     <div class="table-responsive">
-        <table class="table table-dark table-hover align-middle mb-0">
-            <thead class="text-cyan small text-uppercase bg-black bg-opacity-30">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="text-dark small text-uppercase bg-light">
                 <tr>
                     <th class="ps-3 py-2">Franchise Name</th>
                     <th class="py-2">Code</th>
@@ -76,17 +76,17 @@
                 {% for item in franchise_summaries %}
                 {% set f = item.franchise %}
                 <tr>
-                    <td class="ps-3 py-2 fw-bold text-white">
+                    <td class="ps-3 py-2 fw-bold text-dark">
                         <img src="{{ url_for('static', filename='uploads/' + f.logo) if f.logo and not f.logo.startswith('http') else (f.logo or url_for('static', filename='uploads/default_logo.png')) }}" 
-                             alt="{{ f.name }}" class="rounded-circle object-fit-cover border border-secondary me-2" width="30" height="30">
+                             alt="{{ f.name }}" class="rounded-circle object-fit-cover border me-2" width="30" height="30">
                         {{ f.name }}
                     </td>
-                    <td class="py-2"><span class="badge bg-secondary font-monospace">{{ f.short_name }}</span></td>
-                    <td class="py-2"><span class="badge bg-dark border border-secondary text-cyan">{{ item.squad_count }} / {{ f.squad_limit }}</span></td>
-                    <td class="py-2 text-warning fw-bold font-monospace">₹ {{ item.spent | currency }}</td>
+                    <td class="py-2"><span class="badge bg-light text-dark border font-monospace">{{ f.short_name }}</span></td>
+                    <td class="py-2"><span class="badge bg-light text-primary border">{{ item.squad_count }} / {{ f.squad_limit }}</span></td>
+                    <td class="py-2 text-danger fw-bold font-monospace">₹ {{ item.spent | currency }}</td>
                     <td class="py-2 text-success fw-bold font-monospace">₹ {{ item.remaining | currency }}</td>
-                    <td class="py-2 font-monospace">₹ {{ item.highest_purchase | currency }}</td>
-                    <td class="py-2 pe-3 text-end font-monospace">₹ {{ item.lowest_purchase | currency }}</td>
+                    <td class="py-2 font-monospace text-dark">₹ {{ item.highest_purchase | currency }}</td>
+                    <td class="py-2 pe-3 text-end font-monospace text-dark">₹ {{ item.lowest_purchase | currency }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -95,19 +95,19 @@
 </div>
 
 <!-- Complete Auction Sales & Transaction Log -->
-<div class="spl-card p-0 overflow-hidden">
-    <div class="p-3 bg-dark border-bottom border-secondary d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+<div class="spl-card p-0 overflow-hidden bg-white shadow-sm border">
+    <div class="p-3 bg-light border-bottom d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
         <div>
-            <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-list-check text-warning me-2"></i>Complete Auction Sales History</h5>
+            <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-list-check text-danger me-2"></i>Complete Auction Sales History</h5>
             <small class="text-muted">Itemized acquisition record for every sold player in the system</small>
         </div>
         <div>
-            <input type="text" id="history-search-input" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Filter sales...">
+            <input type="text" id="history-search-input" class="form-control form-control-sm bg-white text-dark border" placeholder="Filter sales...">
         </div>
     </div>
     <div class="table-responsive">
-        <table class="table table-dark table-hover align-middle mb-0" id="sales-history-table">
-            <thead class="text-cyan small text-uppercase bg-black bg-opacity-30">
+        <table class="table table-hover align-middle mb-0" id="sales-history-table">
+            <thead class="text-dark small text-uppercase bg-light">
                 <tr>
                     <th class="ps-3 py-2">Photo</th>
                     <th class="py-2">Rule #</th>
@@ -123,18 +123,18 @@
                 <tr class="history-row">
                     <td class="ps-3 py-2">
                         <img src="{{ url_for('static', filename='uploads/' + p.photo) if p.photo and not p.photo.startswith('http') else (p.photo or url_for('static', filename='uploads/default_player.png')) }}" 
-                             alt="{{ p.name }}" class="rounded-circle object-fit-cover border border-secondary" width="36" height="36">
+                             alt="{{ p.name }}" class="rounded-circle object-fit-cover border" width="36" height="36">
                     </td>
-                    <td class="py-2 font-monospace fw-bold text-warning">#{{ p.rule_number or p.roll_number }}</td>
-                    <td class="py-2 fw-bold text-white">{{ p.name }}</td>
+                    <td class="py-2 font-monospace fw-bold text-danger">#{{ p.rule_number or p.roll_number }}</td>
+                    <td class="py-2 fw-bold text-dark">{{ p.name }}</td>
                     <td class="py-2 small">
-                        <span class="badge bg-secondary">{{ p.category }}</span>
-                        <span class="badge bg-dark border border-secondary text-info">{{ p.role }}</span>
+                        <span class="badge bg-light text-dark border">{{ p.category }}</span>
+                        <span class="badge bg-light text-primary border">{{ p.role }}</span>
                     </td>
                     <td class="py-2">
                         {% if p.franchise %}
-                        <span class="badge bg-dark border border-secondary text-warning">
-                            <i class="fa-solid fa-shield-halved me-1"></i>{{ p.franchise.name }}
+                        <span class="badge bg-light text-dark border">
+                            <i class="fa-solid fa-shield-halved text-danger me-1"></i>{{ p.franchise.name }}
                         </span>
                         {% else %}
                         <span class="text-muted small">Franchise #{{ p.sold_to }}</span>
@@ -145,9 +145,9 @@
                     </td>
                     <td class="py-2 text-end pe-3">
                         {% if p.auction_type == 'SECOND_CHANCE' %}
-                        <span class="badge bg-warning text-dark font-monospace"><i class="fa-solid fa-rotate-right me-1"></i>SECOND CHANCE</span>
+                        <span class="badge bg-danger text-white font-monospace"><i class="fa-solid fa-rotate-right me-1"></i>SECOND CHANCE</span>
                         {% else %}
-                        <span class="badge bg-cyan text-dark font-monospace"><i class="fa-solid fa-gavel me-1"></i>PRIMARY</span>
+                        <span class="badge bg-primary text-white font-monospace"><i class="fa-solid fa-gavel me-1"></i>PRIMARY</span>
                         {% endif %}
                     </td>
                 </tr>

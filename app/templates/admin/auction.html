@@ -7,13 +7,13 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <!-- Page Title Header -->
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary gap-3">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 pb-3 border-bottom border-secondary-subtle gap-3">
     <div>
-        <h2 class="fw-bold text-white mb-0"><i class="fa-solid fa-gavel text-cyan me-2"></i>Primary Auction Console</h2>
+        <h2 class="fw-bold text-dark mb-0"><i class="fa-solid fa-gavel text-danger me-2"></i>Primary Auction Console</h2>
         <small class="text-muted">Enter player rule number → 10s live bidding timer → Click team cards to bid</small>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <a href="{{ url_for('live.auction_live') }}" target="_blank" class="btn btn-outline-info btn-sm fw-semibold">
+        <a href="{{ url_for('live.auction_live') }}" target="_blank" class="btn btn-outline-danger btn-sm fw-semibold">
             <i class="fa-solid fa-tv me-1"></i> Open Projector View
         </a>
         <span id="auction-state-badge" class="badge bg-secondary fs-6 px-3 py-2">
@@ -23,13 +23,55 @@
 </div>
 
 <!-- ==========================================
+     DEDICATED ALWAYS-VISIBLE RULE NUMBER SECTION (Requirement 1)
+     ========================================== -->
+<div class="spl-rule-number-bar spl-card mb-4 p-3 border-2 border-danger shadow-sm bg-white" id="spl-always-visible-rule-bar">
+    <div class="row g-2 align-items-center justify-content-between">
+        <div class="col-12 col-md-auto d-flex align-items-center gap-2">
+            <span class="badge bg-danger p-2 rounded-3 me-1">
+                <i class="fa-solid fa-gavel text-white fs-6"></i>
+            </span>
+            <div>
+                <label for="rule-input-dedicated" class="fw-bold text-dark font-display fs-6 mb-0 text-uppercase">
+                    Rule Number:
+                </label>
+                <div class="text-muted extra-small">Always-visible primary auction player selector</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-5">
+            <div class="input-group">
+                <span class="input-group-text bg-light text-danger fw-bold border-secondary-subtle">#</span>
+                <input type="text" id="rule-input-dedicated" class="form-control font-monospace fw-bold border-secondary-subtle" 
+                       placeholder="Enter Rule Number (e.g. 23-0456)" 
+                       autocomplete="off" 
+                       oninput="syncRuleInput(this.value)"
+                       onkeypress="if(event.key==='Enter') searchPlayerByRuleDedicated();">
+                <button type="button" class="btn btn-danger fw-bold px-3 d-flex align-items-center gap-1" onclick="searchPlayerByRuleDedicated()">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Search</span>
+                </button>
+            </div>
+            <div id="rule-lookup-error-dedicated" class="alert alert-danger py-1.5 px-3 small d-none mt-2 mb-0"></div>
+        </div>
+
+        <div class="col-12 col-md-auto d-flex align-items-center gap-2 justify-content-md-end">
+            <div class="p-2 rounded bg-light border border-secondary-subtle d-flex align-items-center gap-2">
+                <span class="text-muted extra-small fw-bold text-uppercase">Active Player:</span>
+                <span class="badge bg-danger fs-6 font-monospace" id="dedicated-rule-active-pill">None (Waiting)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
      1. RULE NUMBER SEARCH & VERIFICATION CARD
      (Requirements 2, 3, 4: Search Rule Number, Display Details, Update Rule Number, Prevent Sold)
      ========================================== -->
-<div class="spl-card mb-4 border-2 border-primary shadow-sm" id="player-entry-card">
+<div class="spl-card mb-4 border-2 border-primary shadow-sm bg-white" id="player-entry-card">
     <div class="p-3 p-md-4">
         <div class="text-center mb-3">
-            <h4 class="fw-bold text-white mb-1"><i class="fa-solid fa-magnifying-glass text-cyan me-2"></i>Search by Rule Number</h4>
+            <h4 class="fw-bold text-dark mb-1"><i class="fa-solid fa-magnifying-glass text-danger me-2"></i>Search by Rule Number</h4>
             <p class="text-muted small mb-0">Enter a player's Rule Number to view full details, update rule number, or start 10s auction bidding</p>
         </div>
 
@@ -39,9 +81,9 @@
                 <div id="rule-lookup-error" class="alert alert-danger py-2 small d-none mb-3"></div>
 
                 <div class="input-group input-group-lg shadow-sm">
-                    <span class="input-group-text bg-dark border-secondary text-cyan fw-bold">#</span>
-                    <input type="text" id="rule-input" class="form-control bg-dark text-white border-secondary font-monospace fw-bold" placeholder="e.g. 23-0456" autocomplete="off" onkeypress="if(event.key==='Enter') searchPlayerByRule();">
-                    <button type="button" id="btn-search-player" class="btn btn-spl-primary px-4 fw-bold" onclick="searchPlayerByRule()">
+                    <span class="input-group-text bg-light border-secondary-subtle text-danger fw-bold">#</span>
+                    <input type="text" id="rule-input" class="form-control bg-white text-dark border-secondary-subtle font-monospace fw-bold" placeholder="e.g. 23-0456" autocomplete="off" oninput="syncRuleInput(this.value)" onkeypress="if(event.key==='Enter') searchPlayerByRule();">
+                    <button type="button" id="btn-search-player" class="btn btn-danger px-4 fw-bold" onclick="searchPlayerByRule()">
                         <i class="fa-solid fa-magnifying-glass me-1"></i> Search
                     </button>
                 </div>
@@ -49,13 +91,13 @@
         </div>
 
         <!-- Player Search Result Details Box (Requirements 3 & 4) -->
-        <div id="player-search-result" class="d-none mt-4 p-3 p-md-4 rounded bg-dark border border-secondary shadow-lg">
+        <div id="player-search-result" class="d-none mt-4 p-3 p-md-4 rounded bg-light border border-secondary-subtle shadow-sm">
             <div class="row g-3 align-items-center">
                 <!-- Col 1: Photo & Status -->
                 <div class="col-12 col-sm-3 col-md-3 text-center">
-                    <img id="search-res-photo" src="/static/uploads/default_player.png" alt="Player Photo" class="rounded-circle border border-cyan border-3 shadow mb-2" width="100" height="100" style="object-fit: cover;" onerror="this.src='/static/uploads/default_player.png'">
+                    <img id="search-res-photo" src="/static/uploads/default_player.png" alt="Player Photo" class="rounded-circle border border-danger border-3 shadow-sm mb-2" width="100" height="100" style="object-fit: cover;" onerror="this.src='/static/uploads/default_player.png'">
                     <div>
-                        <span class="badge bg-warning text-dark font-monospace fs-6 px-3 py-1 mb-1 d-inline-block" id="search-res-rule">RULE #--</span>
+                        <span class="badge bg-danger text-white font-monospace fs-6 px-3 py-1 mb-1 d-inline-block" id="search-res-rule">RULE #--</span>
                     </div>
                     <div>
                         <span class="badge bg-success fs-7 px-2.5 py-1" id="search-res-status">AVAILABLE</span>
@@ -64,31 +106,31 @@
 
                 <!-- Col 2: Player Information (Requirement 3) -->
                 <div class="col-12 col-sm-9 col-md-5">
-                    <h3 class="fw-bold text-white mb-1" id="search-res-name">--</h3>
+                    <h3 class="fw-bold text-dark mb-1" id="search-res-name">--</h3>
                     <div class="d-flex flex-wrap gap-2 mb-2">
-                        <span class="badge bg-dark border border-secondary text-info fs-7" id="search-res-role">BATSMAN</span>
+                        <span class="badge bg-light border border-primary text-primary fs-7" id="search-res-role">BATSMAN</span>
                         <span class="badge bg-secondary fs-7" id="search-res-category">NORMAL</span>
                     </div>
                     <div class="small text-muted">
-                        <div><strong class="text-secondary">Department:</strong> <span class="text-white" id="search-res-branch">--</span> &bull; <strong class="text-secondary">Year:</strong> <span class="text-white" id="search-res-year">--</span></div>
+                        <div><strong class="text-secondary">Department:</strong> <span class="text-dark" id="search-res-branch">--</span> &bull; <strong class="text-secondary">Year:</strong> <span class="text-dark" id="search-res-year">--</span></div>
                         <div class="mt-1"><strong class="text-secondary">Opening Base Price:</strong> <strong class="text-success font-monospace fs-6" id="search-res-base-price">₹ 10,000</strong></div>
-                        <div id="search-res-sold-info" class="text-warning small d-none mt-1"></div>
+                        <div id="search-res-sold-info" class="text-danger small d-none mt-1 fw-bold"></div>
                     </div>
                 </div>
 
                 <!-- Col 3: Update Rule Number & Start Action (Requirements 2 & 4) -->
-                <div class="col-12 col-md-4 border-start-md border-secondary ps-md-3">
+                <div class="col-12 col-md-4 border-start-md border-secondary-subtle ps-md-3">
                     <!-- Update Rule Number Section -->
-                    <div class="p-2.5 rounded bg-black border border-secondary mb-3">
+                    <div class="p-2.5 rounded bg-white border border-secondary-subtle mb-3 shadow-sm">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="text-muted extra-small fw-bold text-uppercase">Current Rule Number</span>
-                            <span class="badge bg-dark text-warning font-monospace" id="curr-rule-display">--</span>
+                            <span class="badge bg-danger text-white font-monospace" id="curr-rule-display">--</span>
                         </div>
                         <label class="text-muted extra-small fw-semibold d-block mb-1">New Rule Number</label>
                         <div class="input-group input-group-sm mb-1">
-                            <input type="text" id="new-rule-input" class="form-control bg-dark text-white border-secondary font-monospace" placeholder="e.g. 23-0789" onkeypress="if(event.key==='Enter') updateCurrentPlayerRule();">
-                            <button type="button" class="btn btn-outline-warning fw-bold px-3" onclick="updateCurrentPlayerRule()">
-                                Update Rule Number
+                            <input type="text" id="new-rule-input" class="form-control bg-white text-dark border-secondary-subtle font-monospace" placeholder="e.g. 23-0789" onkeypress="if(event.key==='Enter') updateCurrentPlayerRule();">
+                            <button type="button" class="btn btn-outline-danger fw-bold px-3" onclick="updateCurrentPlayerRule()">
+                                Update
                             </button>
                         </div>
                         <div id="update-rule-feedback" class="extra-small d-none"></div>
@@ -108,12 +150,12 @@
         </div>
 
         <!-- Quick Select Pills for Available Players -->
-        <div class="mt-4 pt-3 border-top border-secondary text-center" id="quick-players-container">
+        <div class="mt-4 pt-3 border-top border-secondary-subtle text-center" id="quick-players-container">
             <small class="text-muted d-block mb-2 fw-semibold">QUICK SELECT FROM AVAILABLE PLAYERS:</small>
             <div class="d-flex flex-wrap justify-content-center gap-1.5" id="quick-players-pills" style="max-height: 90px; overflow-y: auto;">
                 {% for p in available_players %}
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 extra-small" onclick="quickSelectPlayer('{{ p.rule_number or p.roll_number }}')">
-                    <strong class="text-cyan">#{{ p.rule_number or p.roll_number }}</strong> {{ p.name }}
+                    <strong class="text-danger">#{{ p.rule_number or p.roll_number }}</strong> {{ p.name }}
                 </button>
                 {% else %}
                 <span class="text-muted extra-small">No available players remaining in primary pool.</span>
@@ -128,11 +170,11 @@
      ========================================== -->
 <div id="bidding-arena" class="d-none">
     <!-- Sold Player 10-Second Celebration Banner (Requirements 1, 7, 8) -->
-    <div id="admin-sold-alert-banner" class="alert alert-success d-none py-3 px-4 rounded-4 border-2 border-warning shadow-lg text-center mb-4">
-        <div class="display-6 fw-black text-warning mb-1">🎉 CONGRATULATIONS! PLAYER SOLD! 🎉</div>
-        <div class="fs-5 text-white mb-2">Sold to <strong id="admin-sold-winner-team" class="text-cyan">--</strong> for <strong id="admin-sold-final-price" class="text-warning font-monospace">₹ 0</strong></div>
+    <div id="admin-sold-alert-banner" class="alert alert-success d-none py-3 px-4 rounded-4 border-2 border-danger shadow text-center mb-4 bg-white">
+        <div class="display-6 fw-black text-danger mb-1">🎉 CONGRATULATIONS! PLAYER SOLD! 🎉</div>
+        <div class="fs-5 text-dark mb-2">Sold to <strong id="admin-sold-winner-team" class="text-primary">--</strong> for <strong id="admin-sold-final-price" class="text-danger font-monospace">₹ 0</strong></div>
         <div>
-            <span class="badge bg-black border border-warning text-warning fs-6 px-4 py-2 rounded-pill shadow">
+            <span class="badge bg-light border border-danger text-danger fs-6 px-4 py-2 rounded-pill shadow-sm">
                 <i class="fa-solid fa-clock me-2"></i>Clearing in <span id="admin-sold-timer-seconds">10</span>s
             </span>
         </div>
@@ -141,28 +183,28 @@
     <div class="row g-4 mb-4">
         <!-- Player Details Card -->
         <div class="col-12 col-lg-5">
-            <div class="spl-card h-100">
-                <div class="spl-card-header d-flex justify-content-between align-items-center">
-                    <h5 class="fw-bold text-cyan mb-0"><i class="fa-solid fa-id-card me-2"></i>Active Player Profile</h5>
-                    <span class="badge bg-warning text-dark font-monospace fw-bold" id="card-rule-number">RULE #--</span>
+            <div class="spl-card h-100 bg-white border border-secondary-subtle shadow-sm">
+                <div class="spl-card-header d-flex justify-content-between align-items-center bg-light border-bottom border-secondary-subtle">
+                    <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-id-card text-danger me-2"></i>Active Player Profile</h5>
+                    <span class="badge bg-danger text-white font-monospace fw-bold" id="card-rule-number">RULE #--</span>
                 </div>
                 <div class="p-3 text-center">
-                    <img id="card-player-photo" src="" alt="Player" class="rounded-circle border border-cyan border-3 shadow-lg mb-3 object-fit-cover" width="115" height="115" onerror="this.src='/static/uploads/default_player.png'">
-                    <h3 class="fw-bold text-white mb-1" id="card-player-name">--</h3>
+                    <img id="card-player-photo" src="" alt="Player" class="rounded-circle border border-danger border-3 shadow mb-3 object-fit-cover" width="115" height="115" onerror="this.src='/static/uploads/default_player.png'">
+                    <h3 class="fw-bold text-dark mb-1" id="card-player-name">--</h3>
                     <div class="d-flex justify-content-center gap-2 mb-3">
-                        <span class="badge bg-dark border border-secondary text-info fs-7" id="card-player-role">BATSMAN</span>
+                        <span class="badge bg-light border border-primary text-primary fs-7" id="card-player-role">BATSMAN</span>
                         <span class="badge bg-secondary fs-7" id="card-player-category">NORMAL</span>
                     </div>
 
-                    <div class="p-3 bg-dark rounded border border-secondary text-start mb-3 small">
+                    <div class="p-3 bg-light rounded border border-secondary-subtle text-start mb-3 small">
                         <div class="row g-2">
-                            <div class="col-6"><span class="text-muted">Branch:</span> <strong class="text-white" id="card-player-branch">--</strong></div>
-                            <div class="col-6"><span class="text-muted">Year:</span> <strong class="text-white" id="card-player-year">--</strong></div>
-                            <div class="col-12"><span class="text-muted">Experience:</span> <strong class="text-white" id="card-player-experience">--</strong></div>
+                            <div class="col-6"><span class="text-muted">Branch:</span> <strong class="text-dark" id="card-player-branch">--</strong></div>
+                            <div class="col-6"><span class="text-muted">Year:</span> <strong class="text-dark" id="card-player-year">--</strong></div>
+                            <div class="col-12"><span class="text-muted">Experience:</span> <strong class="text-dark" id="card-player-experience">--</strong></div>
                         </div>
                     </div>
 
-                    <div class="p-2.5 rounded bg-dark border border-secondary text-center">
+                    <div class="p-2.5 rounded bg-light border border-secondary-subtle text-center">
                         <span class="text-muted extra-small d-block text-uppercase">Opening Base Price</span>
                         <strong class="text-success fs-5 font-monospace" id="card-base-price">₹ 10,000</strong>
                     </div>
@@ -172,31 +214,31 @@
 
         <!-- Live Bidding Board & Timer Display -->
         <div class="col-12 col-lg-7">
-            <div class="spl-card h-100 d-flex flex-column justify-content-between">
+            <div class="spl-card h-100 d-flex flex-column justify-content-between bg-white border border-secondary-subtle shadow-sm">
                 <div>
                     <!-- Current Bid Display & 10s Timer Banner -->
-                    <div class="p-3 rounded bg-dark border border-cyan mb-3">
+                    <div class="p-3 rounded bg-light border border-danger-subtle mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted extra-small text-uppercase fw-bold"><i class="fa-solid fa-gavel me-1 text-cyan"></i>LIVE AUCTION BOARD</span>
+                            <span class="text-muted extra-small text-uppercase fw-bold"><i class="fa-solid fa-gavel me-1 text-danger"></i>LIVE AUCTION BOARD</span>
                             <!-- 10-Second Timer -->
                             <div class="spl-timer-ring-container">
-                                <span class="spl-timer-badge text-warning bg-black" id="auction-timer-display">10s</span>
+                                <span class="spl-timer-badge text-danger bg-white border border-danger shadow-sm" id="auction-timer-display">10s</span>
                             </div>
                         </div>
 
                         <div class="text-center py-2">
                             <span class="text-muted extra-small d-block text-uppercase fw-bold">CURRENT HIGHEST BID</span>
-                            <h1 class="fw-black text-warning display-4 my-1 font-monospace" id="current-bid-display">₹ 10,000</h1>
+                            <h1 class="fw-black text-danger display-4 my-1 font-monospace" id="current-bid-display">₹ 10,000</h1>
                             <div class="d-flex justify-content-center align-items-center gap-2 mt-2" id="highest-bidder-info">
                                 <span class="text-muted small">Leading Team:</span> 
                                 <span class="badge bg-secondary fs-6 px-3 py-1.5" id="highest-bidder-name">No Bids Placed Yet</span>
                             </div>
                         </div>
 
-                        <div class="text-center mt-2 pt-2 border-top border-secondary">
+                        <div class="text-center mt-2 pt-2 border-top border-secondary-subtle">
                             <small class="text-muted">
-                                Next Minimum Bid: <strong class="text-cyan font-monospace fs-6" id="next-valid-bid-display">₹ 10,000</strong>
-                                <span class="badge bg-dark border border-secondary text-light ms-2" id="bid-increment-step-badge">+₹2,000</span>
+                                Next Minimum Bid: <strong class="text-dark font-monospace fs-6" id="next-valid-bid-display">₹ 10,000</strong>
+                                <span class="badge bg-white border border-secondary-subtle text-dark ms-2" id="bid-increment-step-badge">+₹2,000</span>
                             </small>
                         </div>
                     </div>
@@ -205,15 +247,15 @@
                     <div class="row g-2 mb-3" id="admin-top-two-bidders">
                         <!-- 🥇 Highest Bidder -->
                         <div class="col-6">
-                            <div class="p-2.5 rounded bg-dark border border-warning shadow-sm position-relative text-center h-100" id="admin-lead-card">
-                                <span class="badge bg-warning text-dark fw-bold px-2 py-0.5 extra-small position-absolute top-0 start-50 translate-middle shadow">
+                            <div class="p-2.5 rounded bg-white border border-danger shadow-sm position-relative text-center h-100" id="admin-lead-card">
+                                <span class="badge bg-danger text-white fw-bold px-2 py-0.5 extra-small position-absolute top-0 start-50 translate-middle shadow-sm">
                                     🥇 HIGHEST BID
                                 </span>
                                 <div class="d-flex align-items-center justify-content-center gap-2 mt-2">
-                                    <img id="admin-lead-logo" src="/static/uploads/default_logo.png" class="rounded-circle border border-warning bg-black p-0.5" style="width: 38px; height: 38px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
+                                    <img id="admin-lead-logo" src="/static/uploads/default_logo.png" class="rounded-circle border border-danger bg-light p-0.5" style="width: 38px; height: 38px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
                                     <div class="text-start overflow-hidden">
-                                        <div class="fw-bold text-white small text-truncate" id="admin-lead-name" style="max-width: 140px;">No Bids Yet</div>
-                                        <span class="text-warning fw-bold font-monospace small" id="admin-lead-amount">₹ 0</span>
+                                        <div class="fw-bold text-dark small text-truncate" id="admin-lead-name" style="max-width: 140px;">No Bids Yet</div>
+                                        <span class="text-danger fw-bold font-monospace small" id="admin-lead-amount">₹ 0</span>
                                     </div>
                                 </div>
                             </div>
@@ -221,15 +263,15 @@
 
                         <!-- 🥈 Second Highest Bidder -->
                         <div class="col-6">
-                            <div class="p-2.5 rounded bg-dark border border-secondary shadow-sm position-relative text-center h-100" id="admin-second-card">
-                                <span class="badge bg-secondary text-light fw-bold px-2 py-0.5 extra-small position-absolute top-0 start-50 translate-middle shadow">
+                            <div class="p-2.5 rounded bg-white border border-secondary-subtle shadow-sm position-relative text-center h-100" id="admin-second-card">
+                                <span class="badge bg-primary text-white fw-bold px-2 py-0.5 extra-small position-absolute top-0 start-50 translate-middle shadow-sm">
                                     🥈 2ND HIGHEST
                                 </span>
                                 <div class="d-flex align-items-center justify-content-center gap-2 mt-2">
-                                    <img id="admin-second-logo" src="/static/uploads/default_logo.png" class="rounded-circle border border-secondary bg-black p-0.5" style="width: 38px; height: 38px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
+                                    <img id="admin-second-logo" src="/static/uploads/default_logo.png" class="rounded-circle border border-secondary-subtle bg-light p-0.5" style="width: 38px; height: 38px; object-fit: contain;" onerror="this.src='/static/uploads/default_logo.png'">
                                     <div class="text-start overflow-hidden">
                                         <div class="fw-bold text-muted small text-truncate" id="admin-second-name" style="max-width: 140px;">No Challenger</div>
-                                        <span class="text-info fw-bold font-monospace small" id="admin-second-amount">—</span>
+                                        <span class="text-primary fw-bold font-monospace small" id="admin-second-amount">—</span>
                                     </div>
                                 </div>
                             </div>
@@ -237,47 +279,47 @@
                     </div>
 
                     <!-- Flash / Celebration Status Banner -->
-                    <div id="sold-celebration-banner" class="alert alert-success d-none py-3 text-center shadow-lg border border-2 border-success">
-                        <div class="badge bg-success fs-6 px-3 py-1 mb-2 text-uppercase tracking-wide">
+                    <div id="sold-celebration-banner" class="alert alert-success d-none py-3 text-center shadow border border-2 border-success bg-white">
+                        <div class="badge bg-success fs-6 px-3 py-1 mb-2 text-uppercase tracking-wide text-white">
                             <i class="fa-solid fa-trophy me-1"></i> PLAYER SOLD!
                         </div>
                         <div class="d-flex align-items-center justify-content-center gap-3 my-2">
-                            <img id="sold-banner-player-photo" src="/static/uploads/default_player.png" class="rounded-circle border border-2 border-white shadow" width="60" height="60" style="object-fit:cover;" onerror="this.src='/static/uploads/default_player.png'">
+                            <img id="sold-banner-player-photo" src="/static/uploads/default_player.png" class="rounded-circle border border-2 border-danger shadow-sm" width="60" height="60" style="object-fit:cover;" onerror="this.src='/static/uploads/default_player.png'">
                             <div class="text-start">
-                                <h4 class="fw-bold mb-0 text-white" id="sold-banner-player-name">Player Name</h4>
-                                <div class="text-warning fw-black fs-4 font-monospace" id="sold-banner-price">₹ 0</div>
+                                <h4 class="fw-bold mb-0 text-dark" id="sold-banner-player-name">Player Name</h4>
+                                <div class="text-danger fw-black fs-4 font-monospace" id="sold-banner-price">₹ 0</div>
                             </div>
                         </div>
-                        <div class="p-2 rounded bg-black bg-opacity-50 border border-success d-inline-flex align-items-center justify-content-center gap-2 px-3 mt-1">
-                            <img id="sold-banner-winner-logo" src="/static/uploads/default_logo.png" class="rounded-circle border border-warning p-0.5 bg-black" width="40" height="40" style="object-fit:contain;" onerror="this.src='/static/uploads/default_logo.png'">
+                        <div class="p-2 rounded bg-light border border-success d-inline-flex align-items-center justify-content-center gap-2 px-3 mt-1">
+                            <img id="sold-banner-winner-logo" src="/static/uploads/default_logo.png" class="rounded-circle border border-danger p-0.5 bg-white" width="40" height="40" style="object-fit:contain;" onerror="this.src='/static/uploads/default_logo.png'">
                             <div class="text-start">
                                 <small class="text-muted extra-small d-block text-uppercase fw-bold">WINNING FRANCHISE</small>
-                                <strong class="text-cyan fs-6" id="sold-banner-winner-name">Team Name</strong>
+                                <strong class="text-primary fs-6" id="sold-banner-winner-name">Team Name</strong>
                             </div>
                         </div>
                     </div>
 
-                    <div id="unsold-banner" class="alert alert-warning text-dark d-none py-3 text-center shadow-lg">
-                        <h4 class="fw-bold mb-1">UNSOLD</h4>
+                    <div id="unsold-banner" class="alert alert-danger text-danger bg-danger-subtle border border-danger d-none py-3 text-center shadow-sm">
+                        <h4 class="fw-bold mb-1"><i class="fa-solid fa-ban me-1"></i> UNSOLD</h4>
                         <p class="mb-0 small">No bids placed within 10 seconds. Player marked UNSOLD.</p>
                     </div>
                 </div>
 
                 <!-- Admin Action Controls -->
-                <div class="pt-3 border-top border-secondary">
+                <div class="pt-3 border-top border-secondary-subtle">
                     <div class="row g-2 mb-2">
                         <div class="col-6 col-md-3">
-                            <button type="button" class="btn btn-warning w-100 fw-bold btn-sm py-2" onclick="pauseAuctionAction()">
+                            <button type="button" class="btn btn-danger w-100 fw-bold btn-sm py-2 shadow-sm" onclick="pauseAuctionAction()">
                                 <i class="fa-solid fa-pause me-1"></i> Pause
                             </button>
                         </div>
                         <div class="col-6 col-md-3">
-                            <button type="button" class="btn btn-info text-dark w-100 fw-bold btn-sm py-2" onclick="resumeAuctionAction()">
+                            <button type="button" class="btn btn-primary w-100 fw-bold btn-sm py-2 shadow-sm" onclick="resumeAuctionAction()">
                                 <i class="fa-solid fa-forward me-1"></i> Resume
                             </button>
                         </div>
                         <div class="col-6 col-md-3">
-                            <button type="button" class="btn btn-outline-info w-100 fw-bold btn-sm py-2" onclick="extendTimerAction(10)">
+                            <button type="button" class="btn btn-outline-danger w-100 fw-bold btn-sm py-2" onclick="extendTimerAction(10)">
                                 <i class="fa-solid fa-clock-rotate-left me-1"></i> +10s
                             </button>
                         </div>
@@ -290,7 +332,7 @@
 
                     <div class="row g-2">
                         <div class="col-12 col-md-7">
-                            <button type="button" id="btn-sell-player" class="btn btn-success btn-lg w-100 fw-bold shadow" onclick="finalizeSoldAction()">
+                            <button type="button" id="btn-sell-player" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" onclick="finalizeSoldAction()">
                                 <i class="fa-solid fa-gavel me-2"></i> MARK AS SOLD
                             </button>
                         </div>
@@ -308,17 +350,17 @@
     <!-- ==========================================
          3. CLICKABLE FRANCHISE TEAM CARDS (ALL 6 TEAMS)
          ========================================== -->
-    <div class="spl-card border-top border-cyan border-3 mb-4">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 pb-2 border-bottom border-secondary">
+    <div class="spl-card border-top border-danger border-3 mb-4 bg-white shadow-sm">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 pb-2 border-bottom border-secondary-subtle">
             <div>
-                <h5 class="fw-bold text-white mb-0">
-                    <i class="fa-solid fa-shield-halved text-cyan me-2"></i>Registered Franchise Teams — Click Team to Bid
+                <h5 class="fw-bold text-dark mb-0">
+                    <i class="fa-solid fa-shield-halved text-danger me-2"></i>Registered Franchise Teams — Click Team to Bid
                 </h5>
                 <small class="text-muted">Clicking any team automatically places the next valid bid for that team and resets the 10s timer</small>
             </div>
             <div>
-                <span class="badge bg-dark border border-secondary text-cyan px-3 py-1.5 font-monospace">
-                    Next Bid: <strong id="header-next-bid-pill">₹ 10,000</strong>
+                <span class="badge bg-light border border-secondary-subtle text-dark px-3 py-1.5 font-monospace">
+                    Next Bid: <strong id="header-next-bid-pill" class="text-danger">₹ 10,000</strong>
                 </span>
             </div>
         </div>
@@ -326,9 +368,9 @@
         <div class="row g-3" id="franchise-cards-container">
             {% for f in franchises %}
             <div class="col-12 col-sm-6 col-md-4">
-                <div class="team-bid-card p-2.5 text-center h-100 position-relative" id="team-card-{{ f.id }}" data-franchise-id="{{ f.id }}">
+                <div class="team-bid-card p-2.5 text-center h-100 position-relative bg-white" id="team-card-{{ f.id }}" data-franchise-id="{{ f.id }}">
                     <!-- Current Leader Crown Badge -->
-                    <div class="team-leader-badge badge bg-warning text-dark fw-bold position-absolute top-0 start-50 translate-middle shadow-sm d-none" id="leader-badge-{{ f.id }}">
+                    <div class="team-leader-badge badge bg-danger text-white fw-bold position-absolute top-0 start-50 translate-middle shadow-sm d-none" id="leader-badge-{{ f.id }}">
                         <i class="fa-solid fa-crown me-1"></i> LEADER
                     </div>
 
@@ -339,7 +381,7 @@
                     </div>
 
                     <!-- Team Name & Short Name -->
-                    <div class="fw-bold text-white small text-truncate" title="{{ f.name }}">{{ f.name }}</div>
+                    <div class="fw-bold text-dark small text-truncate" title="{{ f.name }}">{{ f.name }}</div>
                     <span class="badge bg-secondary extra-small font-monospace mb-1">{{ f.short_name }}</span>
 
                     <!-- Captain / Eligibility Status -->
@@ -356,14 +398,14 @@
                     </div>
 
                     <!-- Purse Balance -->
-                    <div class="bg-black bg-opacity-40 p-1.5 rounded border border-secondary mb-2">
+                    <div class="bg-light p-1.5 rounded border border-secondary-subtle mb-2">
                         <span class="text-muted extra-small d-block text-uppercase fw-bold">Purse</span>
                         <strong class="text-success small font-monospace" id="team-purse-{{ f.id }}">₹ {{ f.remaining_purse | currency }}</strong>
                     </div>
 
                     <!-- Squad Count -->
                     <div class="extra-small text-muted mb-2">
-                        Squad: <span class="text-light fw-bold" id="team-squad-{{ f.id }}">{{ f.squad_count }}</span>/{{ f.squad_limit }}
+                        Squad: <span class="text-dark fw-bold" id="team-squad-{{ f.id }}">{{ f.squad_count }}</span>/{{ f.squad_limit }}
                     </div>
 
                     <!-- Action Button (Click to Bid) -->
@@ -372,7 +414,7 @@
                         <i class="fa-solid fa-ban me-1"></i> Captain Required
                     </button>
                     {% else %}
-                    <button type="button" class="btn btn-sm btn-spl-primary w-100 fw-bold py-1 team-bid-btn" id="team-btn-{{ f.id }}">
+                    <button type="button" class="btn btn-sm btn-danger w-100 fw-bold py-1 team-bid-btn shadow-sm" id="team-btn-{{ f.id }}">
                         <i class="fa-solid fa-gavel me-1"></i> BID
                     </button>
                     {% endif %}
@@ -397,6 +439,15 @@ let autoFinalizing = false;
 let isSubmittingBid = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Restore persisted Rule Number across navigations/refreshes (Requirement 1)
+    const savedRule = sessionStorage.getItem('spl_entered_rule');
+    if (savedRule) {
+        const dedInput = document.getElementById('rule-input-dedicated');
+        const mainInput = document.getElementById('rule-input');
+        if (dedInput) dedInput.value = savedRule;
+        if (mainInput) mainInput.value = savedRule;
+    }
+
     // Start fast timer tick (100ms) for high precision countdown
     setInterval(tickTimer, 100);
     // Poll server state every 1.2 seconds
@@ -417,25 +468,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let searchedPlayerObj = null;
 
+// Synchronize Rule Number inputs across the page and persist to sessionStorage (Requirement 1)
+function syncRuleInput(val) {
+    if (val !== undefined && val !== null) {
+        sessionStorage.setItem('spl_entered_rule', val);
+        const dedInput = document.getElementById('rule-input-dedicated');
+        const mainInput = document.getElementById('rule-input');
+        if (dedInput && dedInput.value !== val) dedInput.value = val;
+        if (mainInput && mainInput.value !== val) mainInput.value = val;
+    }
+}
+
+function searchPlayerByRuleDedicated() {
+    const dedInput = document.getElementById('rule-input-dedicated');
+    const rule = dedInput ? dedInput.value.trim() : '';
+    searchPlayerByRule(rule);
+}
+
 function quickSelectPlayer(ruleNo) {
-    document.getElementById('rule-input').value = ruleNo;
+    syncRuleInput(ruleNo);
     searchPlayerByRule(ruleNo);
 }
 
-// Requirement 3: Rule Number Search & Verification
+// Requirement 1 & 3: Rule Number Search & Verification
 async function searchPlayerByRule(overrideRule) {
     const input = document.getElementById('rule-input');
     const errBox = document.getElementById('rule-lookup-error');
+    const errBoxDed = document.getElementById('rule-lookup-error-dedicated');
     const resBox = document.getElementById('player-search-result');
-    const rule = (overrideRule || input.value).trim();
+    const rule = (overrideRule !== undefined ? overrideRule : (input ? input.value : '')).trim();
 
-    errBox.classList.add('d-none');
-    resBox.classList.add('d-none');
+    syncRuleInput(rule);
+
+    if (errBox) errBox.classList.add('d-none');
+    if (errBoxDed) errBoxDed.classList.add('d-none');
+    if (resBox) resBox.classList.add('d-none');
     searchedPlayerObj = null;
 
     if (!rule) {
-        errBox.classList.remove('d-none');
-        errBox.textContent = 'Please enter a player Rule Number.';
+        const msg = 'Please enter a player Rule Number.';
+        if (errBox) { errBox.classList.remove('d-none'); errBox.textContent = msg; }
+        if (errBoxDed) { errBoxDed.classList.remove('d-none'); errBoxDed.textContent = msg; }
         return;
     }
 
@@ -444,8 +517,9 @@ async function searchPlayerByRule(overrideRule) {
         const data = await res.json();
 
         if (!data.success || !data.player) {
-            errBox.classList.remove('d-none');
-            errBox.textContent = data.message || `Player with Rule Number '${rule}' not found.`;
+            const msg = data.message || `Player with Rule Number '${rule}' not found.`;
+            if (errBox) { errBox.classList.remove('d-none'); errBox.textContent = msg; }
+            if (errBoxDed) { errBoxDed.classList.remove('d-none'); errBoxDed.textContent = msg; }
             return;
         }
 
@@ -809,10 +883,23 @@ async function pollState() {
         if (badge) {
             badge.textContent = state.status;
             if (state.status === 'BIDDING') badge.className = 'badge bg-success fs-6 px-3 py-2';
-            else if (state.status === 'PAUSED') badge.className = 'badge bg-warning text-dark fs-6 px-3 py-2';
-            else if (state.status === 'SOLD') badge.className = 'badge bg-cyan text-dark fs-6 px-3 py-2';
+            else if (state.status === 'PAUSED') badge.className = 'badge bg-danger text-white fs-6 px-3 py-2';
+            else if (state.status === 'SOLD') badge.className = 'badge bg-primary text-white fs-6 px-3 py-2';
             else if (state.status === 'UNSOLD') badge.className = 'badge bg-danger fs-6 px-3 py-2';
             else badge.className = 'badge bg-secondary fs-6 px-3 py-2';
+        }
+
+        // Dedicated Always-Visible Rule Bar Active Pill (Requirement 1)
+        const activePill = document.getElementById('dedicated-rule-active-pill');
+        if (activePill) {
+            if (state.active_player) {
+                const rNo = state.active_player.rule_number || state.active_player.roll_number || '--';
+                activePill.textContent = `RULE #${rNo} - ${state.active_player.name}`;
+                activePill.className = 'badge bg-danger text-white fs-6 font-monospace';
+            } else {
+                activePill.textContent = 'None (Waiting)';
+                activePill.className = 'badge bg-secondary fs-6 font-monospace';
+            }
         }
 
         // Active Player Visibility
@@ -890,7 +977,7 @@ async function pollState() {
 
         const bidderNameEl = document.getElementById('highest-bidder-name');
         if (state.highest_bidder) {
-            bidderNameEl.className = 'badge bg-warning text-dark fs-6 px-3 py-1.5 fw-bold';
+            bidderNameEl.className = 'badge bg-danger text-white fs-6 px-3 py-1.5 fw-bold shadow-sm';
             bidderNameEl.innerHTML = `<i class="fa-solid fa-crown me-1"></i> ${state.highest_bidder.name} (${state.highest_bidder.short_name})`;
         } else {
             bidderNameEl.className = 'badge bg-secondary fs-6 px-3 py-1.5';
@@ -955,7 +1042,7 @@ async function pollState() {
             renderTimer(state.remaining_seconds || 0);
         }
 
-        // Render & Update Franchise Team Cards
+        // Render & Update Franchise Team Cards (Requirements 3, 4, 5)
         if (state.franchises && state.franchises.length > 0) {
             state.franchises.forEach(f => {
                 const card = document.getElementById(`team-card-${f.id}`);
@@ -980,22 +1067,23 @@ async function pollState() {
 
                 if (card && btn) {
                     if (f.is_highest_bidder) {
-                        card.className = 'team-bid-card p-2.5 text-center h-100 position-relative leading-bidder';
-                        btn.className = 'btn btn-sm btn-warning w-100 fw-bold py-1 disabled';
+                        card.className = 'team-bid-card p-2.5 text-center h-100 position-relative leading-bidder bg-white';
+                        btn.className = 'btn btn-sm btn-danger w-100 fw-bold py-1 disabled shadow-sm';
                         btn.innerHTML = `<i class="fa-solid fa-crown me-1"></i> LEADING`;
                         leaderBadge?.classList.remove('d-none');
                     } else if (!f.has_captain) {
-                        card.className = 'team-bid-card p-2.5 text-center h-100 position-relative disabled border border-danger border-opacity-50';
+                        card.className = 'team-bid-card p-2.5 text-center h-100 position-relative border border-danger border-opacity-50 bg-white';
                         btn.className = 'btn btn-sm btn-outline-danger w-100 extra-small py-1 disabled';
                         btn.innerHTML = `<i class="fa-solid fa-ban me-1"></i> Captain Required`;
                         leaderBadge?.classList.add('d-none');
                     } else if (f.can_bid) {
-                        card.className = 'team-bid-card p-2.5 text-center h-100 position-relative';
-                        btn.className = 'btn btn-sm btn-spl-primary w-100 fw-bold py-1';
+                        card.className = 'team-bid-card p-2.5 text-center h-100 position-relative bg-white';
+                        btn.className = 'btn btn-sm btn-danger w-100 fw-bold py-1 shadow-sm';
                         btn.innerHTML = `<i class="fa-solid fa-gavel me-1"></i> BID ₹${Number(nextValidBidVal).toLocaleString()}`;
                         leaderBadge?.classList.add('d-none');
                     } else {
-                        card.className = 'team-bid-card p-2.5 text-center h-100 position-relative disabled';
+                        // Clean card for teams that cannot bid / already spent (NO ash/grey background!)
+                        card.className = 'team-bid-card p-2.5 text-center h-100 position-relative bg-white border border-secondary-subtle';
                         btn.className = 'btn btn-sm btn-outline-secondary w-100 extra-small py-1 disabled';
                         btn.textContent = f.cannot_bid_reason || 'Cannot Bid';
                         leaderBadge?.classList.add('d-none');
