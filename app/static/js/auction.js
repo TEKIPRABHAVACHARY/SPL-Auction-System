@@ -215,19 +215,71 @@ function updateProjectorUi(data) {
     const p = data.active_player;
 
     if (status === 'SOLD' && soldCard) {
+        // Calculate remaining seconds based on server sold_display_until timestamp (Requirements 1 & 8)
+        let remainingSec = 10;
+        if (data.sold_until_timestamp) {
+            remainingSec = Math.max(0, Math.ceil((data.sold_until_timestamp - Date.now()) / 1000));
+        } else if (data.sold_remaining_seconds !== undefined && data.sold_remaining_seconds !== null) {
+            remainingSec = data.sold_remaining_seconds;
+        }
+
+        // Exactly 10 seconds completed: automatically clear sold screen (Requirements 1, 7, 8)
+        if (remainingSec <= 0) {
+            stopSoldConfetti();
+            soldCard.classList.add('d-none');
+            statusWaiting.classList.remove('d-none');
+            const waitText = document.getElementById('projector-waiting-text');
+            if (waitText) waitText.innerText = 'WAITING FOR NEXT PLAYER';
+            fetch('/api/auction/clear-sold', { method: 'POST' }).catch(() => {});
+            return;
+        }
+
         soldCard.classList.remove('d-none');
-        soldCard.className = 'spl-card border-success p-5 shadow-lg animate-sold my-auto';
-        document.getElementById('sold-player-name').innerText = p.name;
-        document.getElementById('sold-final-price').innerText = formatCurrencyJs(data.current_bid);
-        document.getElementById('sold-winning-franchise').innerText = data.highest_bidder ? data.highest_bidder.name : 'SOLD';
+        soldCard.className = 'spl-card border-success p-4 p-md-5 d-flex flex-column justify-content-center shadow-2xl animate-sold-celebration my-auto text-center position-relative overflow-hidden';
+        
+        const soldTimerEl = document.getElementById('sold-timer-seconds');
+        if (soldTimerEl) soldTimerEl.innerText = remainingSec;
+
+        const soldName = document.getElementById('sold-player-name');
+        if (soldName) soldName.innerText = p.name;
+        
+        const soldPrice = document.getElementById('sold-final-price');
+        if (soldPrice) soldPrice.innerText = formatCurrencyJs(data.sold_price || data.current_bid);
+        
+        const winningF = data.winning_franchise || data.highest_bidder;
+        const soldWinTeam = document.getElementById('sold-winning-franchise');
+        if (soldWinTeam) soldWinTeam.innerText = winningF ? winningF.name : 'AIVONTRAA FC';
+        
+        const soldWinLogo = document.getElementById('sold-winning-logo');
+        if (soldWinLogo) {
+            const wLogo = (winningF && winningF.logo) ? (winningF.logo.startsWith('http') ? winningF.logo : `/static/uploads/${winningF.logo}`) : '/static/uploads/default_logo.png';
+            soldWinLogo.src = wLogo;
+        }
+
+        const soldPhoto = document.getElementById('sold-player-photo');
+        if (soldPhoto) {
+            const pPhoto = (p && p.photo) ? (p.photo.startsWith('http') ? p.photo : `/static/uploads/${p.photo}`) : '/static/uploads/default_player.png';
+            soldPhoto.src = pPhoto;
+        }
+
+        startSoldConfetti();
         return;
+    } else {
+        stopSoldConfetti();
     }
 
     if (status === 'UNSOLD' && unsoldCard) {
         unsoldCard.classList.remove('d-none');
-        unsoldCard.className = 'spl-card border-danger p-5 shadow-lg animate-sold my-auto';
-        document.getElementById('unsold-player-name').innerText = p.name;
-        document.getElementById('unsold-base-price').innerText = formatCurrencyJs(p.base_price);
+        unsoldCard.className = 'spl-card border-danger p-4 p-md-5 shadow-lg animate-sold my-auto text-center';
+        const unsoldName = document.getElementById('unsold-player-name');
+        if (unsoldName) unsoldName.innerText = p.name;
+        const unsoldPrice = document.getElementById('unsold-base-price');
+        if (unsoldPrice) unsoldPrice.innerText = formatCurrencyJs(p.base_price);
+        const unsoldPhoto = document.getElementById('unsold-player-photo');
+        if (unsoldPhoto) {
+            const pPhoto = (p && p.photo) ? (p.photo.startsWith('http') ? p.photo : `/static/uploads/${p.photo}`) : '/static/uploads/default_player.png';
+            unsoldPhoto.src = pPhoto;
+        }
         return;
     }
 
@@ -240,43 +292,87 @@ function updateProjectorUi(data) {
         imgEl.src = photoSrc;
     }
 
-    document.getElementById('projector-player-name').innerText = p.name;
-    document.getElementById('projector-player-roll').innerText = `#${p.roll_number}`;
-    document.getElementById('projector-player-role').innerText = p.role;
-    document.getElementById('projector-player-category').innerText = p.category;
-    document.getElementById('projector-base-price').innerText = formatCurrencyJs(p.base_price);
-    document.getElementById('projector-current-bid').innerText = formatCurrencyJs(data.current_bid);
+    // Player details neatly positioned in corner overlay (Requirement 8)
+    const nameEl = document.getElementById('projector-player-name');
+    if (nameEl) nameEl.innerText = p.name;
+    const roleEl = document.getElementById('projector-player-role');
+    if (roleEl) roleEl.innerText = p.role;
+    const catEl = document.getElementById('projector-player-category');
+    if (catEl) catEl.innerText = p.category;
+    const branchEl = document.getElementById('projector-player-branch');
+    if (branchEl) branchEl.innerText = p.branch || 'CSE';
+    const yearEl = document.getElementById('projector-player-year');
+    if (yearEl) yearEl.innerText = p.year ? (p.year.toString().toLowerCase().includes('year') ? p.year : `${p.year} Year`) : '3rd Year';
 
-    const bidderEl = document.getElementById('projector-highest-bidder');
-    if (bidderEl) {
-        bidderEl.innerText = data.highest_bidder ? data.highest_bidder.name : 'NO BIDS YET';
-    }
+    const baseEl = document.getElementById('projector-base-price');
+    if (baseEl) baseEl.innerText = formatCurrencyJs(p.base_price);
+    const curBidEl = document.getElementById('projector-current-bid');
+    if (curBidEl) curBidEl.innerText = formatCurrencyJs(data.current_bid);
 
+    // 10-Second Digital Countdown Timer
     const timerEl = document.getElementById('projector-timer');
     if (timerEl) {
         if (status === 'BIDDING') {
-            const sec = data.remaining_seconds;
-            timerEl.innerText = `00:${sec < 10 ? '0' : ''}${sec}`;
-            if (sec <= 5) {
-                timerEl.className = 'display-4 fw-bold timer-urgent';
-            } else if (sec <= 10) {
-                timerEl.className = 'display-4 fw-bold timer-warning';
+            const sec = data.remaining_seconds != null ? data.remaining_seconds : 10;
+            timerEl.innerText = `${sec}s`;
+            if (sec <= 3) {
+                timerEl.className = 'projector-timer-display timer-urgent';
+            } else if (sec <= 6) {
+                timerEl.className = 'projector-timer-display timer-warning';
             } else {
-                timerEl.className = 'display-4 fw-bold text-cyan';
+                timerEl.className = 'projector-timer-display text-cyan';
             }
         } else if (status === 'PAUSED') {
             timerEl.innerText = 'PAUSED';
-            timerEl.className = 'display-4 fw-bold text-warning';
+            timerEl.className = 'projector-timer-display text-warning';
         } else if (status === 'PLAYER_PREVIEW') {
-            timerEl.innerText = 'GET READY';
-            timerEl.className = 'display-4 fw-bold text-info';
+            timerEl.innerText = 'READY';
+            timerEl.className = 'projector-timer-display text-info';
         } else if (data.remaining_seconds === 0 && status !== 'WAITING') {
-            timerEl.innerText = 'TIME EXPIRED';
-            timerEl.className = 'display-4 fw-bold text-danger';
+            timerEl.innerText = '0s';
+            timerEl.className = 'projector-timer-display text-danger';
         } else {
             timerEl.innerText = status;
-            timerEl.className = 'display-4 fw-bold text-muted';
+            timerEl.className = 'projector-timer-display text-muted';
         }
+    }
+
+    // Top Two Bidding Franchisees (🥇 Highest Bidder & 🥈 Second Highest Bidder)
+    const leadName = document.getElementById('projector-lead-name');
+    const leadAmount = document.getElementById('projector-lead-amount');
+    const leadLogo = document.getElementById('projector-lead-logo');
+    const leadCard = document.getElementById('projector-lead-card');
+
+    if (data.highest_bidder) {
+        if (leadName) leadName.innerText = `${data.highest_bidder.name} (${data.highest_bidder.short_name})`;
+        if (leadAmount) leadAmount.innerText = formatCurrencyJs(data.highest_bidder.amount || data.current_bid);
+        if (leadLogo) {
+            const hLogo = data.highest_bidder.logo ? (data.highest_bidder.logo.startsWith('http') ? data.highest_bidder.logo : `/static/uploads/${data.highest_bidder.logo}`) : '/static/uploads/default_logo.png';
+            leadLogo.src = hLogo;
+        }
+        if (leadCard) leadCard.className = 'p-3 rounded bg-dark border border-warning shadow-sm position-relative text-center h-100 leading-bidder';
+    } else {
+        if (leadName) leadName.innerText = 'No Bids Placed Yet';
+        if (leadAmount) leadAmount.innerText = '₹ 0';
+        if (leadLogo) leadLogo.src = '/static/uploads/default_logo.png';
+        if (leadCard) leadCard.className = 'p-3 rounded bg-dark border border-secondary shadow-sm position-relative text-center h-100';
+    }
+
+    const secName = document.getElementById('projector-second-name');
+    const secAmount = document.getElementById('projector-second-amount');
+    const secLogo = document.getElementById('projector-second-logo');
+
+    if (data.second_highest_bidder) {
+        if (secName) secName.innerText = `${data.second_highest_bidder.name} (${data.second_highest_bidder.short_name})`;
+        if (secAmount) secAmount.innerText = formatCurrencyJs(data.second_highest_bidder.amount);
+        if (secLogo) {
+            const sLogo = data.second_highest_bidder.logo ? (data.second_highest_bidder.logo.startsWith('http') ? data.second_highest_bidder.logo : `/static/uploads/${data.second_highest_bidder.logo}`) : '/static/uploads/default_logo.png';
+            secLogo.src = sLogo;
+        }
+    } else {
+        if (secName) secName.innerText = 'No Challenger Yet';
+        if (secAmount) secAmount.innerText = '—';
+        if (secLogo) secLogo.src = '/static/uploads/default_logo.png';
     }
 }
 
@@ -667,4 +763,73 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+// ==================== 8. SMOOTH CELEBRATION CONFETTI (Requirement 9) ====================
+let confettiAnimationId = null;
+
+function startSoldConfetti() {
+    const canvas = document.getElementById('sold-confetti-canvas');
+    if (!canvas) return;
+    if (confettiAnimationId) return; // already running
+
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.parentElement ? canvas.parentElement.offsetWidth : window.innerWidth;
+    canvas.height = canvas.parentElement ? canvas.parentElement.offsetHeight : window.innerHeight;
+
+    const colors = ['#ffd700', '#00f2fe', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#ffffff'];
+    const particles = [];
+    const count = 65;
+
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height * 0.8,
+            size: Math.random() * 8 + 4,
+            speedY: Math.random() * 2.5 + 2,
+            speedX: (Math.random() - 0.5) * 2,
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            opacity: Math.random() * 0.4 + 0.6
+        });
+    }
+
+    function renderConfetti() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+            p.y += p.speedY;
+            p.x += p.speedX;
+            p.rotation += p.rotationSpeed;
+            if (p.y > canvas.height) {
+                p.y = -10;
+                p.x = Math.random() * canvas.width;
+            }
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate((p.rotation * Math.PI) / 180);
+            ctx.globalAlpha = p.opacity;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+            ctx.restore();
+        });
+
+        confettiAnimationId = requestAnimationFrame(renderConfetti);
+    }
+
+    renderConfetti();
+}
+
+function stopSoldConfetti() {
+    if (confettiAnimationId) {
+        cancelAnimationFrame(confettiAnimationId);
+        confettiAnimationId = null;
+    }
+    const canvas = document.getElementById('sold-confetti-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
 

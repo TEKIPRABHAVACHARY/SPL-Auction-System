@@ -15,10 +15,14 @@ class SystemSettings(db.Model):
         'starting_purse': '300000',
         'squad_limit': '15',
         'base_price': '10000',
-        'timer_seconds': '30',
+        'timer_seconds': '10',
         'bid_increment_step': '5000',
         'theme_default': 'dark',
-        'SHOW_PURCHASE_PRICE_PUBLICLY': 'true'
+        'SHOW_PURCHASE_PRICE_PUBLICLY': 'true',
+        'audit_logging_enabled': 'true',
+        'audit_retention_days': '90',
+        'audit_log_level': 'ALL',
+        'audit_track_ip': 'true'
     }
 
     @classmethod

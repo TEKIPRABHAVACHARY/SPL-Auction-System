@@ -3,13 +3,18 @@
 {% block title %}Official Teams & Squads — {{ event_name }}{% endblock %}
 
 {% block content %}
-<div class="text-center mb-5">
-    <span class="badge bg-warning text-dark px-3 py-2 fs-6 fw-bold mb-2">SPL TOURNAMENT ROSTERS</span>
-    <h1 class="fw-extrabold text-cyan display-5 mb-2">OFFICIAL FRANCHISE TEAMS</h1>
-    <p class="text-muted">Explore the confirmed squads and team compositions for the Sphoorthy Premier League.</p>
+<div class="text-center mb-4">
+    <div class="d-inline-flex align-items-center gap-2 mb-2">
+        <span class="badge bg-warning text-dark px-3 py-1.5 fs-7 font-display fw-black uppercase">SPL TOURNAMENT ROSTERS 2026</span>
+        <a href="{{ url_for('public.live_ui') }}" class="badge bg-primary text-white px-3 py-1.5 fs-7 font-display fw-bold text-decoration-none">
+            <i class="fa-solid fa-bolt me-1 text-warning"></i> Open Live Auction UI
+        </a>
+    </div>
+    <h1 class="fw-black text-white font-display display-5 mb-1 text-uppercase">OFFICIAL FRANCHISE TEAMS</h1>
+    <p class="text-muted font-sans">Explore the confirmed squads, remaining purse budgets, and team compositions for the Sphoorthy Premier League.</p>
 </div>
 
-<!-- 6 Teams Cards Layout -->
+<!-- Teams Cards Layout -->
 <div class="row g-4">
     {% for team in teams %}
     {% set f = team.franchise %}
@@ -105,12 +110,23 @@
                     <tbody>
                         {% for player in team.players %}
                         <tr>
-                            <td class="text-muted small">{{ loop.index }}</td>
-                            <td class="fw-bold text-light">{{ player.name }}</td>
-                            <td><span class="badge bg-dark border border-secondary extra-small">{{ player.role }}</span></td>
-                            <td><span class="extra-small text-info">{{ player.category }}</span></td>
+                            <td class="text-muted small font-monospace">{{ loop.index }}</td>
+                            <td class="fw-bold text-light">
+                                {{ player.name }}
+                                {% if player.is_captain or (f.captain_id and f.captain_id == player.id) or (f.captain_name and f.captain_name.strip().lower() == player.name.strip().lower()) %}
+                                <span class="badge bg-warning text-dark extra-small ms-1 fw-bold font-display"><i class="fa-solid fa-crown me-1"></i>CAPTAIN</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-dark border border-secondary extra-small font-display">{{ player.role }}</span></td>
+                            <td><span class="extra-small text-info font-display">{{ player.category }}</span></td>
                             {% if show_prices %}
-                            <td class="text-end text-success fw-bold small">Rs. {{ player.sold_price | currency }}</td>
+                            <td class="text-end fw-bold small font-monospace">
+                                {% if player.is_captain or (f.captain_id and f.captain_id == player.id) or player.sold_price is none or player.sold_price == 0 %}
+                                <span class="text-white-50 fs-6">—</span>
+                                {% else %}
+                                <span class="text-success">₹ {{ player.sold_price | currency }}</span>
+                                {% endif %}
+                            </td>
                             {% endif %}
                         </tr>
                         {% else %}

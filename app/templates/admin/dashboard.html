@@ -1,63 +1,11 @@
-{% extends "base.html" %}
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'dashboard' %}
 
 {% block title %}Admin Dashboard — {{ event_name }} Panel{% endblock %}
 
-{% block content_wrapper %}
-<div class="d-flex flex-column flex-lg-row">
-    <!-- Sidebar Navigation -->
-    <div class="spl-sidebar">
-        <div class="spl-brand">
-            <i class="fa-solid fa-gavel text-cyan me-2"></i>{{ event_name }} <span class="spl-accent">ADMIN</span>
-        </div>
-        <div class="spl-nav">
-            <a href="{{ url_for('admin.dashboard') }}" class="spl-nav-item active">
-                <i class="fa-solid fa-chart-pie"></i> Dashboard
-            </a>
-            <a href="{{ url_for('admin.players') }}" class="spl-nav-item">
-                <i class="fa-solid fa-users"></i> Players
-            </a>
-            <a href="{{ url_for('admin.franchises') }}" class="spl-nav-item">
-                <i class="fa-solid fa-shield-halved"></i> Franchises
-            </a>
-            <a href="{{ url_for('admin.auction_control') }}" class="spl-nav-item">
-                <i class="fa-solid fa-gavel"></i> Primary Auction
-            </a>
-            <a href="{{ url_for('admin.unsold_players') }}" class="spl-nav-item">
-                <i class="fa-solid fa-user-slash"></i> Unsold Players
-            </a>
-            <a href="{{ url_for('admin.second_chance_dashboard') }}" class="spl-nav-item">
-                <i class="fa-solid fa-rotate-right"></i> Second Chance
-            </a>
-            <a href="{{ url_for('admin.final_squads') }}" class="spl-nav-item">
-                <i class="fa-solid fa-people-group"></i> Final Squads
-            </a>
-            <a href="{{ url_for('admin.fixtures_management') }}" class="spl-nav-item">
-                <i class="fa-solid fa-calendar-days"></i> Fixtures
-            </a>
-            <a href="{{ url_for('admin.audit_logs') }}" class="spl-nav-item">
-                <i class="fa-solid fa-clipboard-list"></i> Audit Logs
-            </a>
-            <a href="{{ url_for('admin.users_management') }}" class="spl-nav-item">
-                <i class="fa-solid fa-user-gear"></i> Users & Security
-            </a>
-            <a href="{{ url_for('admin.system_health_dashboard') }}" class="spl-nav-item">
-                <i class="fa-solid fa-heart-pulse"></i> System Health
-            </a>
-            <a href="{{ url_for('admin.settings') }}" class="spl-nav-item">
-                <i class="fa-solid fa-gears"></i> Settings
-            </a>
-        </div>
-        <div class="p-3 border-top border-secondary">
-            <a href="{{ url_for('auth.logout') }}" class="spl-nav-item text-danger p-0">
-                <i class="fa-solid fa-right-from-bracket"></i> Logout
-            </a>
-        </div>
-    </div>
-
-    <!-- Main Content Area -->
-    <div class="spl-content flex-grow-1">
+{% block admin_content %}
         <!-- Header Bar -->
-        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary gap-3">
             <div>
                 <h2 class="fw-bold text-white mb-0">SPL Admin Control Center</h2>
                 <small class="text-muted">{{ event_subtitle }} Administrator Dashboard</small>
@@ -187,142 +135,180 @@
             </div>
         </div>
 
-        <!-- 3. Franchise Overview Grid -->
+        <!-- 3. Operational Stages & Eligibility Status -->
+        <div class="row g-3 mb-4">
+            <!-- Primary Auction Summary -->
+            <div class="col-md-4">
+                <div class="spl-card h-100 border-start border-4 border-cyan">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small fw-bold text-uppercase">Primary Auction</span>
+                        <span class="badge {% if auction_status.value == 'LIVE' %}bg-danger animate-pulse{% else %}bg-primary{% endif %}">
+                            {{ auction_status.value }}
+                        </span>
+                    </div>
+                    <h3 class="fw-bold text-white mb-1">{{ primary_available }}</h3>
+                    <p class="text-muted small mb-3">Available players in Primary Pool</p>
+                    <a href="{{ url_for('admin.auction_control') }}" class="btn btn-sm btn-outline-cyan w-100">
+                        <i class="fa-solid fa-gavel me-1"></i> Primary Auction Engine
+                    </a>
+                </div>
+            </div>
+
+            <!-- Second Chance Auction Summary -->
+            <div class="col-md-4">
+                <div class="spl-card h-100 border-start border-4 border-warning">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small fw-bold text-uppercase">Second Chance Auction</span>
+                        <span class="badge {% if is_second_chance_active %}bg-success{% else %}bg-secondary{% endif %}">
+                            {% if is_second_chance_active %}ACTIVE{% else %}STANDBY{% endif %}
+                        </span>
+                    </div>
+                    <h3 class="fw-bold text-white mb-1">{{ second_chance_eligible }}</h3>
+                    <p class="text-muted small mb-3">Unsold players eligible for 2nd chance ({{ second_chance_sold }} sold)</p>
+                    <a href="{{ url_for('admin.second_chance_dashboard') }}" class="btn btn-sm btn-outline-warning w-100">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Second Chance Console
+                    </a>
+                </div>
+            </div>
+
+            <!-- Team Bidding Readiness -->
+            <div class="col-md-4">
+                <div class="spl-card h-100 border-start border-4 {% if ineligible_teams_count == 0 and active_franchises_count > 0 %}border-success{% else %}border-danger{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small fw-bold text-uppercase">Team Bidding Eligibility</span>
+                        <span class="badge {% if ineligible_teams_count == 0 and active_franchises_count > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ eligible_teams_count }} / {{ active_franchises_count }} READY
+                        </span>
+                    </div>
+                    <h3 class="fw-bold text-white mb-1">{{ eligible_teams_count }} <span class="fs-6 text-muted font-normal">/ {{ active_franchises_count }} Teams</span></h3>
+                    <p class="text-muted small mb-3">
+                        {% if ineligible_teams_count > 0 %}
+                            <span class="text-danger fw-semibold"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ ineligible_teams_count }} team(s) missing captain</span>
+                        {% else %}
+                            <span class="text-success fw-semibold"><i class="fa-solid fa-circle-check me-1"></i>All teams captained & eligible</span>
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('admin.franchises') }}" class="btn btn-sm btn-outline-light w-100">
+                        <i class="fa-solid fa-users me-1"></i> Inspect Team Captains
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Post-Auction Stage Callout (When both Primary and Second Chance are completed) -->
+        {% if both_auctions_completed %}
+        <div class="card bg-success-subtle border border-success p-3 mb-4 rounded-3 text-white">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                    <h5 class="fw-bold text-success mb-1">
+                        <i class="fa-solid fa-trophy text-warning me-2"></i>Post-Auction Stage Unlocked!
+                    </h5>
+                    <p class="text-white-50 small mb-0">
+                        Both Primary Auction and Second Chance Auction have been completed. You can now add post-auction players with editable Room Number details.
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.players') }}?post_auction=1" class="btn btn-success fw-bold text-nowrap">
+                        <i class="fa-solid fa-user-plus me-1"></i> Add Post-Auction Player
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 4. Franchise Bidding Readiness & Overview Grid -->
         <div class="row g-4 mb-4">
             <div class="col-12 d-flex justify-content-between align-items-center">
-                <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-shield-halved text-cyan me-2"></i>Franchise Overview</h4>
+                <div>
+                    <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-shield-halved text-cyan me-2"></i>Franchise Bidding Readiness</h4>
+                    <small class="text-muted">Rule: First member must be Captain. Maximum 15 members per team.</small>
+                </div>
                 <a href="{{ url_for('admin.franchises') }}" class="btn btn-outline-cyan btn-sm"><i class="fa-solid fa-gear me-1"></i>Manage Franchises</a>
             </div>
             {% for f in all_franchises %}
             <div class="col-md-6 col-xl-4">
-                <a href="{{ url_for('admin.inspect_franchise', id=f.id) }}" class="text-decoration-none">
-                    <div class="spl-card h-100 hover-border-cyan transition-all cursor-pointer">
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <img src="{{ url_for('static', filename='uploads/' + (f.logo or 'default_logo.png')) }}" alt="{{ f.name }}" class="rounded bg-dark border border-secondary p-1" style="width: 50px; height: 50px; object-fit: contain;">
+                <div class="spl-card h-100 position-relative {% if not f.is_eligible_for_bidding %}border border-danger border-opacity-50{% endif %}">
+                    <!-- Eligibility Header Badge -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <img src="{{ url_for('static', filename='uploads/' + (f.logo or 'default_logo.png')) }}" alt="{{ f.name }}" class="rounded bg-dark border border-secondary p-1" style="width: 44px; height: 44px; object-fit: contain;">
                             <div>
-                                <h5 class="fw-bold text-white mb-0">{{ f.name }} <span class="badge bg-primary text-uppercase fs-8">{{ f.short_name }}</span></h5>
+                                <h6 class="fw-bold text-white mb-0">{{ f.name }} <span class="badge bg-primary text-uppercase fs-8">{{ f.short_name }}</span></h6>
                                 <small class="text-muted"><i class="fa-solid fa-user-tie me-1"></i>{{ f.owner_name or 'Franchise Representative' }}</small>
                             </div>
                         </div>
-                        <div class="p-2 rounded bg-dark border border-secondary mb-3 small">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="text-muted">Owner Email:</span>
-                                <span class="text-cyan font-monospace fw-semibold">{{ f.authorized_email or 'Not Authorized' }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted">Google Login:</span>
-                                {% if f.google_auth_enabled and f.authorized_email %}
-                                    <span class="badge bg-success-subtle text-success border border-success"><i class="fa-brands fa-google me-1"></i>CONNECTED</span>
+                        <div>
+                            {% if f.is_eligible_for_bidding %}
+                                <span class="badge bg-success-subtle text-success border border-success fs-8">
+                                    <i class="fa-solid fa-check me-1"></i>ELIGIBLE
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger fs-8">
+                                    <i class="fa-solid fa-ban me-1"></i>NOT ELIGIBLE
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Captain Status -->
+                    <div class="p-2 rounded bg-dark border border-secondary mb-3 small">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted">Team Captain:</span>
+                            {% if f.has_captain %}
+                                <span class="text-white fw-bold"><i class="fa-solid fa-crown text-warning me-1"></i>{{ f.captain_name }}</span>
+                            {% else %}
+                                <span class="text-danger fw-semibold"><i class="fa-solid fa-triangle-exclamation me-1"></i>Not Assigned</span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Status:</span>
+                            {% if f.has_captain %}
+                                <span class="badge bg-success-subtle text-success fs-8"><i class="fa-solid fa-check me-1"></i>Captain Added</span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger fs-8"><i class="fa-solid fa-xmark me-1"></i>Team Captain Required</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Squad & Financial Metrics -->
+                    <div class="row text-center g-2 small mb-3">
+                        <div class="col-4">
+                            <div class="p-2 bg-dark rounded border border-secondary">
+                                <span class="text-muted d-block fs-8">MEMBERS</span>
+                                {% if f.squad_count >= 15 %}
+                                    <span class="fw-bold text-danger fs-7">15/15 Full</span>
                                 {% else %}
-                                    <span class="badge bg-secondary"><i class="fa-solid fa-lock me-1"></i>DISABLED</span>
+                                    <span class="fw-bold text-white fs-6">{{ f.squad_count }} / 15</span>
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="row text-center g-2 small">
-                            <div class="col-4">
-                                <div class="p-2 bg-dark rounded">
-                                    <span class="text-muted d-block fs-8">SQUAD</span>
-                                    <span class="fw-bold text-white fs-6">{{ f.squad_count }} / {{ f.squad_limit }}</span>
-                                </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-dark rounded border border-secondary">
+                                <span class="text-muted d-block fs-8">SPENT</span>
+                                <span class="fw-bold text-danger fs-7">{{ f.spent_purse | currency }}</span>
                             </div>
-                            <div class="col-4">
-                                <div class="p-2 bg-dark rounded">
-                                    <span class="text-muted d-block fs-8">SPENT</span>
-                                    <span class="fw-bold text-danger fs-7">{{ f.spent_purse | currency }}</span>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="p-2 bg-dark rounded">
-                                    <span class="text-muted d-block fs-8">PURSE REMAINING</span>
-                                    <span class="fw-bold text-gold fs-7">{{ f.remaining_purse | currency }}</span>
-                                </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-dark rounded border border-secondary">
+                                <span class="text-muted d-block fs-8">PURSE REM.</span>
+                                <span class="fw-bold text-gold fs-7">{{ f.remaining_purse | currency }}</span>
                             </div>
                         </div>
                     </div>
-                </a>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('admin.inspect_franchise', id=f.id) }}" class="btn btn-outline-cyan btn-sm flex-fill">
+                            <i class="fa-solid fa-eye me-1"></i> View Team
+                        </a>
+                        {% if not f.has_captain %}
+                            <a href="{{ url_for('admin.inspect_franchise', id=f.id) }}" class="btn btn-danger btn-sm text-nowrap">
+                                <i class="fa-solid fa-user-plus me-1"></i> Add Captain
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
             {% endfor %}
         </div>
-
-        <!-- 4. System Status & Recent Audit Events -->
-        <div class="row g-4 mb-4">
-            <!-- System Status -->
-            <div class="col-lg-5">
-                <div class="spl-card h-100">
-                    <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-server text-info me-2"></i>System Status</h5>
-                    <div class="divide-y divide-secondary">
-                        <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
-                            <span class="text-muted">Storage Engine:</span>
-                            <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>JSON Storage Active</span>
-                        </div>
-                        <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
-                            <span class="text-muted">Google OAuth Identity:</span>
-                            <span class="badge bg-info"><i class="fa-brands fa-google me-1"></i>Google Identity Services</span>
-                        </div>
-                        <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
-                            <span class="text-muted">Auction Engine:</span>
-                            <span class="badge bg-primary"><i class="fa-solid fa-gavel me-1"></i>Realtime Operational</span>
-                        </div>
-                        <div class="d-flex justify-content-between py-2 border-bottom border-secondary">
-                            <span class="text-muted">Audit Logging:</span>
-                            <span class="badge bg-warning text-dark"><i class="fa-solid fa-shield-halved me-1"></i>Append-Only Active</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Audit Events -->
-            <div class="col-lg-7">
-                <div class="spl-card h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-clock-rotate-left text-warning me-2"></i>Recent Audit Events</h5>
-                        <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-outline-warning btn-sm py-1 px-2 fs-7">
-                            <i class="fa-solid fa-list me-1"></i> View All Audit Logs
-                        </a>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-dark table-sm align-middle mb-0">
-                            <thead class="text-muted small">
-                                <tr>
-                                    <th>Timestamp</th>
-                                    <th>Actor</th>
-                                    <th>Action</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for event in recent_audit_events %}
-                                <tr>
-                                    <td class="small text-muted">{{ event.created_at.strftime('%H:%M:%S') }}</td>
-                                    <td class="small text-white">
-                                        {% if event.admin %}
-                                            {{ event.admin.display_name or event.admin.username }}
-                                        {% elif event.franchise %}
-                                            {{ event.franchise.short_name }} Owner
-                                        {% else %}
-                                            System
-                                        {% endif %}
-                                    </td>
-                                    <td><code class="text-cyan small">{{ event.action }}</code></td>
-                                    <td>
-                                        {% if event.status == 'SUCCESS' %}
-                                            <span class="badge bg-success-subtle text-success fs-8">SUCCESS</span>
-                                        {% else %}
-                                            <span class="badge bg-danger-subtle text-danger fs-8">{{ event.status }}</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-muted text-center py-3">No recent events.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}

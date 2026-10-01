@@ -21,8 +21,9 @@ def find_player_by_roll(roll_number):
     if not player:
         raise ValueError(f"PLAYER NOT FOUND. Please verify the announced roll number '{roll_number}'.")
 
-    if player.status == PlayerStatus.SOLD:
-        raise ValueError(f"PLAYER ALREADY SOLD. Player '{player.name}' (#{player.roll_number}) has already been sold.")
+    # Requirement 2: Strict Sold Player Check
+    if player.is_sold or str(player.status).upper() == 'SOLD' or player.sold_to is not None:
+        raise ValueError(f"Already Sold: Player '{player.name}' (#{player.roll_number}) has already been sold. This player cannot be auctioned again.")
 
     if player.status == PlayerStatus.UNSOLD:
         raise ValueError(f"PLAYER ALREADY UNSOLD. Player '{player.name}' (#{player.roll_number}) was marked UNSOLD.")
@@ -36,11 +37,15 @@ def find_player_by_roll(roll_number):
 
     return player
 
-def activate_player(player_id, admin_id):
+def activate_player(player_id, admin_id=None):
     """Activate player into PLAYER_PREVIEW state (no bidding yet)."""
     player = Player.query.get(player_id)
     if not player:
         raise ValueError("Player not found.")
+
+    # Requirement 2 & 6: Strict Sold Check
+    if player.is_sold or str(player.status).upper() == 'SOLD' or player.sold_to is not None:
+        raise ValueError(f"Already Sold: Player '{player.name}' (#{player.roll_number}) has already been sold. This player cannot be auctioned again.")
 
     is_sc = SystemSettings.get_setting('second_chance_active') == 'true'
     allowed_statuses = [PlayerStatus.AVAILABLE, PlayerStatus.UNSOLD] if is_sc else [PlayerStatus.AVAILABLE]
@@ -66,13 +71,13 @@ def activate_player(player_id, admin_id):
     log_audit(admin_id, action_name, 'Player', player.id, None, player.name)
     return state
 
-def start_bidding(admin_id):
+def start_bidding(admin_id=None):
     """Transition auction from PLAYER_PREVIEW to BIDDING state."""
     state = get_auction_state()
     if state.status != AuctionStatus.PLAYER_PREVIEW or not state.active_player_id:
         raise ValueError("No player currently in preview to start bidding.")
 
-    timer_duration = int(SystemSettings.get_setting('timer_seconds', 30))
+    timer_duration = int(SystemSettings.get_setting('timer_seconds', 10))
     state.status = AuctionStatus.BIDDING
     state.timer_seconds = timer_duration
     state.timer_end = datetime.utcnow() + timedelta(seconds=timer_duration)
@@ -83,7 +88,7 @@ def start_bidding(admin_id):
     log_audit(admin_id, 'BIDDING_STARTED', 'Player', state.active_player_id, None, f"Timer: {timer_duration}s")
     return state
 
-def pause_auction(admin_id):
+def pause_auction(admin_id=None):
     """Pause live bidding."""
     state = get_auction_state()
     if state.status != AuctionStatus.BIDDING:
@@ -97,7 +102,7 @@ def pause_auction(admin_id):
     log_audit(admin_id, 'AUCTION_PAUSED', 'Player', state.active_player_id, None, f"Seconds left: {rem}")
     return state
 
-def resume_auction(admin_id):
+def resume_auction(admin_id=None):
     """Resume live bidding from PAUSED state."""
     state = get_auction_state()
     if state.status != AuctionStatus.PAUSED:
@@ -112,7 +117,7 @@ def resume_auction(admin_id):
     log_audit(admin_id, 'AUCTION_RESUMED', 'Player', state.active_player_id, None, f"Resumed with {rem}s")
     return state
 
-def extend_timer(additional_seconds, admin_id):
+def extend_timer(additional_seconds, admin_id=None):
     """Extend auction timer by additional seconds (e.g. +10s)."""
     state = get_auction_state()
     if state.status not in [AuctionStatus.BIDDING, AuctionStatus.PAUSED]:
@@ -168,9 +173,13 @@ def place_bid(franchise_id, bid_amount):
     if not franchise or not franchise.is_active:
         raise ValueError("Franchise account is inactive or invalid.")
 
+    # 0. Team Captain & Eligibility Validation (Strict enforcement: Captain Required to Bid)
+    if not franchise.has_captain:
+        raise ValueError("Team is NOT ELIGIBLE for bidding: Team Captain Required.")
+
     # 1. Squad Limit Validation (Max 15)
     if franchise.squad_count >= franchise.squad_limit:
-        raise ValueError(f"Squad limit reached: {franchise.squad_count}/{franchise.squad_limit} players.")
+        raise ValueError(f"Squad limit reached: {franchise.squad_count}/{franchise.squad_limit} players (Team Full).")
 
     # 2. Purse Validation
     bid_val = float(bid_amount)
@@ -197,6 +206,13 @@ def place_bid(franchise_id, bid_amount):
     state.highest_bidder_id = franchise.id
     state.last_bid_at = datetime.utcnow()
 
+    # Reset timer on every valid bid
+    timer_duration = int(SystemSettings.get_setting('timer_seconds', 10))
+    state.timer_seconds = timer_duration
+    state.timer_end = datetime.utcnow() + timedelta(seconds=timer_duration)
+    state.paused_seconds_left = None
+    state.status = AuctionStatus.BIDDING
+
     # Record Immutable Bid Log
     bid_record = Bid(
         player_id=player.id,
@@ -211,20 +227,25 @@ def place_bid(franchise_id, bid_amount):
     log_audit(None, action_name, 'Bid', bid_record.id, None, f"{franchise.short_name} bid Rs. {bid_val:,.0f} for {player.name}")
     return state
 
-def finalize_sold(admin_id):
+def finalize_sold(admin_id=None):
     """
     Finalize current active player as SOLD to highest bidder.
     Executes an atomic database transaction. Sets status to SOLD.
+    Guarantees idempotence so repeated calls do not double-deduct purse or duplicate transactions.
     """
     state = get_auction_state()
     if not state.active_player_id:
         raise ValueError("No active player to finalize.")
 
+    # Idempotency check: if state is already marked SOLD for this player, return current state
+    player = Player.query.get(state.active_player_id)
+    winning_franchise = Franchise.query.get(state.highest_bidder_id) if state.highest_bidder_id else None
+
+    if state.status == AuctionStatus.SOLD and player and player.status == PlayerStatus.SOLD and winning_franchise:
+        return player, winning_franchise, player.sold_price
+
     if not state.highest_bidder_id or state.current_bid <= 0:
         raise ValueError("Cannot mark player as SOLD without a valid winning bid.")
-
-    player = Player.query.get(state.active_player_id)
-    winning_franchise = Franchise.query.get(state.highest_bidder_id)
 
     if not winning_franchise or not winning_franchise.is_active:
         raise ValueError("Winning franchise is invalid or inactive.")
@@ -239,37 +260,52 @@ def finalize_sold(admin_id):
 
     # Atomic Transaction
     try:
+        now = datetime.utcnow()
+        is_sc = SystemSettings.get_setting('second_chance_active') == 'true'
         player.status = PlayerStatus.SOLD
         player.sold_to = winning_franchise.id
         player.sold_price = sold_price
+        player.auction_type = 'SECOND_CHANCE' if is_sc else 'PRIMARY'
+        player.sold_at = now
 
-        winning_franchise.remaining_purse -= sold_price
+        # Accurately recalculate winning franchise purse directly from squad
+        winning_franchise.recalculate_purse()
 
-        transaction_record = Transaction(
+        # Check for existing transaction to avoid duplicates
+        transaction_record = Transaction.query.filter_by(
             player_id=player.id,
             franchise_id=winning_franchise.id,
-            amount=sold_price,
-            type='PLAYER_PURCHASE',
-            admin_id=admin_id
-        )
-        db.session.add(transaction_record)
+            type='PLAYER_PURCHASE'
+        ).first()
 
-        # Set Auction State to SOLD
+        if not transaction_record:
+            transaction_record = Transaction(
+                player_id=player.id,
+                franchise_id=winning_franchise.id,
+                amount=sold_price,
+                type='PLAYER_PURCHASE',
+                admin_id=admin_id
+            )
+            db.session.add(transaction_record)
+        else:
+            transaction_record.amount = sold_price
+
+        # Set Auction State to SOLD with 10-second display timer (Requirements 1, 7, 8)
         state.status = AuctionStatus.SOLD
         state.timer_end = None
         state.paused_seconds_left = None
+        state.sold_display_until = now + timedelta(seconds=10)
 
         db.session.commit()
-        is_sc = SystemSettings.get_setting('second_chance_active') == 'true'
         action_name = 'SECOND_CHANCE_PLAYER_SOLD' if is_sc else 'PLAYER_SOLD'
-        log_audit(admin_id, action_name, 'Player', player.id, None, f"Sold to {winning_franchise.name} for Rs. {sold_price:,.0f}")
+        log_audit(admin_id, action_name, 'Player', player.id, None, f"Sold to {winning_franchise.name} for Rs. {sold_price:,.0f} ({player.auction_type})")
         return player, winning_franchise, sold_price
 
     except Exception as e:
         db.session.rollback()
         raise RuntimeError(f"Database transaction failed during SOLD finalization: {str(e)}")
 
-def finalize_unsold(admin_id):
+def finalize_unsold(admin_id=None):
     """Finalize current active player as UNSOLD."""
     state = get_auction_state()
     if not state.active_player_id:
@@ -278,24 +314,44 @@ def finalize_unsold(admin_id):
     player = Player.query.get(state.active_player_id)
 
     try:
+        is_sc = SystemSettings.get_setting('second_chance_active') == 'true'
         player.status = PlayerStatus.UNSOLD
+        player.is_second_chance_eligible = True
 
         # Set Auction State to UNSOLD
         state.status = AuctionStatus.UNSOLD
         state.timer_end = None
         state.paused_seconds_left = None
+        state.sold_display_until = None
 
         db.session.commit()
-        is_sc = SystemSettings.get_setting('second_chance_active') == 'true'
         action_name = 'SECOND_CHANCE_PLAYER_UNSOLD' if is_sc else 'PLAYER_UNSOLD'
-        log_audit(admin_id, action_name, 'Player', player.id, None, f"Player {player.name} marked UNSOLD")
+        log_audit(admin_id, action_name, 'Player', player.id, None, f"Player {player.name} marked {player.status}")
         return player
 
     except Exception as e:
         db.session.rollback()
         raise RuntimeError(f"Database transaction failed during UNSOLD finalization: {str(e)}")
 
-def reset_to_waiting(admin_id):
+def clear_sold_player(admin_id=None):
+    """
+    Automatically remove sold player profile from Live Projection and active screen after 10 seconds.
+    Transitions state to WAITING (or SECOND_CHANCE) and clears active player (Requirements 1, 7, 8).
+    """
+    state = get_auction_state()
+    is_sc = SystemSettings.get_setting('second_chance_active') == 'true'
+    state.status = AuctionStatus.SECOND_CHANCE if is_sc else AuctionStatus.WAITING
+    state.active_player_id = None
+    state.current_bid = 0.0
+    state.highest_bidder_id = None
+    state.timer_end = None
+    state.sold_display_until = None
+    state.paused_seconds_left = None
+    db.session.commit()
+    log_audit(admin_id, 'AUCTION_CLEARED_SOLD', 'AuctionState', state.id, None, '10s sold display completed. Cleared player from active auction screen.')
+    return state
+
+def reset_to_waiting(admin_id=None):
     """Reset global auction state back to WAITING."""
     state = get_auction_state()
     state.status = AuctionStatus.WAITING
@@ -303,10 +359,39 @@ def reset_to_waiting(admin_id):
     state.current_bid = 0.0
     state.highest_bidder_id = None
     state.timer_end = None
+    state.sold_display_until = None
     state.paused_seconds_left = None
     db.session.commit()
     log_audit(admin_id, 'AUCTION_RESET', 'AuctionState', state.id, None, 'Reset to WAITING')
     return state
+
+def update_player_rule_number(player_id, new_rule_number, admin_id=None):
+    """
+    Update player rule number with strict duplicate prevention across the application (Requirements 4 & 5).
+    """
+    if not new_rule_number or not str(new_rule_number).strip():
+        raise ValueError("New Rule Number is required.")
+    clean_rule = str(new_rule_number).strip()
+
+    player = Player.query.get(player_id)
+    if not player:
+        raise ValueError("Player not found.")
+
+    existing = Player.query.filter(Player.roll_number.ilike(clean_rule), Player.id != player.id).first()
+    if existing:
+        raise ValueError(f"Rule Number '{clean_rule}' is already in use by player '{existing.name}'.")
+
+    old_rule = player.roll_number
+    player.roll_number = clean_rule
+
+    # If player is captain of any franchise, update captain rule number too
+    captain_team = Franchise.query.filter_by(captain_id=player.id).first()
+    if captain_team:
+        captain_team.captain_rule_number = clean_rule
+
+    db.session.commit()
+    log_audit(admin_id, 'PLAYER_RULE_NUMBER_UPDATED', 'Player', player.id, None, f"Rule number updated from '{old_rule}' to '{clean_rule}' for {player.name}")
+    return player
 
 # ==================== SECOND-CHANCE AUCTION SERVICES ====================
 
@@ -314,6 +399,7 @@ def find_second_chance_player_by_roll(roll_number):
     """
     Find player by roll number specifically for Second-Chance Auction.
     Must exist, have status UNSOLD, and be marked is_second_chance_eligible.
+    Strictly protects against already sold players (Requirement 6).
     """
     if not roll_number:
         raise ValueError("Roll number is required.")
@@ -322,8 +408,9 @@ def find_second_chance_player_by_roll(roll_number):
     if not player:
         raise ValueError(f"PLAYER NOT FOUND. Roll number '{roll_number}' does not exist.")
 
-    if player.status == PlayerStatus.SOLD:
-        raise ValueError(f"PLAYER EXCLUDED. Player '{player.name}' (#{player.roll_number}) is already SOLD.")
+    # Requirement 6: Sold Player Protection
+    if player.is_sold or str(player.status).upper() == 'SOLD' or player.sold_to is not None:
+        raise ValueError("Already Sold: This player cannot be auctioned again.")
 
     if player.status != PlayerStatus.UNSOLD:
         raise ValueError(f"PLAYER INELIGIBLE. Player '{player.name}' (#{player.roll_number}) is currently {player.status}.")
@@ -401,8 +488,8 @@ def validate_squads_integrity():
             errors.append(f"Validation Error: Player '{p.name}' (#{p.roll_number}) assigned to multiple franchises.")
         assigned_player_ids.add(p.id)
 
-        # 4. Valid Purchase Price
-        if p.sold_price is None or p.sold_price < 0:
+        # 4. Valid Purchase Price (Captains have no purchase price / dash)
+        if not p.is_captain and (p.sold_price is None or p.sold_price < 0):
             errors.append(f"Validation Error: Player '{p.name}' has invalid sold price ({p.sold_price}).")
 
     # 9. UNSOLD / AVAILABLE players not assigned
@@ -414,6 +501,10 @@ def validate_squads_integrity():
     # 3, 5, 6. Franchise Level Checks
     total_db_spending = 0.0
     for f in franchises:
+        # Mandatory Team Captain check
+        if not f.has_captain:
+            errors.append(f"Validation Error: Franchise '{f.name}' does not have a Team Captain. A Team Captain is mandatory for every squad.")
+
         # 3. Max squad limit
         if f.squad_count > f.squad_limit:
             errors.append(f"Validation Error: Franchise '{f.name}' exceeds squad limit ({f.squad_count}/{f.squad_limit}).")
@@ -430,11 +521,12 @@ def validate_squads_integrity():
 
         total_db_spending += actual_spent
 
-        # 8. Transaction record check
+        # 8. Transaction record check (Captains have no purchase price / transaction)
         for p in f.sold_players:
-            tx = Transaction.query.filter_by(player_id=p.id, franchise_id=f.id, type='PLAYER_PURCHASE').first()
-            if not tx:
-                errors.append(f"Validation Error: Player '{p.name}' in '{f.name}' lacks an official purchase transaction record.")
+            if not p.is_captain:
+                tx = Transaction.query.filter_by(player_id=p.id, franchise_id=f.id, type='PLAYER_PURCHASE').first()
+                if not tx:
+                    errors.append(f"Validation Error: Player '{p.name}' in '{f.name}' lacks an official purchase transaction record.")
 
     # 10. DB totals vs Transaction totals match
     total_tx_spending = db.session.query(db.func.sum(Transaction.amount)).filter_by(type='PLAYER_PURCHASE').scalar() or 0.0

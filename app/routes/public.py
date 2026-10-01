@@ -10,7 +10,8 @@ def public_teams():
 
     teams_data = []
     for f in franchises:
-        players = Player.query.filter_by(sold_to=f.id).order_by(Player.name.asc()).all()
+        f.recalculate_purse()
+        players = f.squad_players
 
         role_counts = {
             PlayerRole.BATSMAN: sum(1 for p in players if p.role == PlayerRole.BATSMAN),
@@ -19,7 +20,8 @@ def public_teams():
             PlayerRole.WICKETKEEPER: sum(1 for p in players if p.role == PlayerRole.WICKETKEEPER)
         }
 
-        prices = [p.sold_price for p in players if p.sold_price is not None]
+        # Exclude captains (dash price) from bid averages
+        prices = [p.sold_price for p in players if p.sold_price is not None and not p.is_captain and p.sold_price > 0]
         avg_price = sum(prices) / len(prices) if prices else 0.0
         max_price = max(prices) if prices else 0.0
         min_price = min(prices) if prices else 0.0
@@ -46,3 +48,9 @@ def public_fixtures():
         'public/fixtures.html',
         fixtures=fixtures
     )
+
+@public_bp.route('/ui')
+def live_ui():
+    franchises = Franchise.query.order_by(Franchise.id.asc()).all()
+    return render_template('ui.html', franchises=franchises)
+

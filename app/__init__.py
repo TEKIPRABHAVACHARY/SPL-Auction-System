@@ -50,10 +50,10 @@ def create_app(config_name=None):
     @app.template_filter('currency')
     def format_currency(value):
         try:
-            val = int(value)
+            val = int(round(float(value)))
             s = str(val)
             if len(s) <= 3:
-                return f"Rs. {s}"
+                return s
             last_three = s[-3:]
             remaining = s[:-3]
             groups = []
@@ -62,9 +62,9 @@ def create_app(config_name=None):
                 remaining = remaining[:-2]
             if remaining:
                 groups.insert(0, remaining)
-            return f"Rs. {','.join(groups)},{last_three}"
+            return f"{','.join(groups)},{last_three}"
         except (ValueError, TypeError):
-            return f"Rs. {value}"
+            return str(value or '0')
 
     # Register Blueprints
     from app.routes import auth_bp, admin_bp, franchise_bp, live_bp, api_bp, public_bp

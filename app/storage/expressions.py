@@ -43,6 +43,15 @@ class FieldExpression(BaseExpression):
     def in_(self, values):
         return BinaryExpression(self.name, 'in', values)
 
+    def is_(self, other):
+        return BinaryExpression(self.name, '==', other)
+
+    def isnot(self, other):
+        return BinaryExpression(self.name, '!=', other)
+
+    def is_not(self, other):
+        return BinaryExpression(self.name, '!=', other)
+
     def asc(self):
         return OrderExpression(self.name, ascending=True)
 

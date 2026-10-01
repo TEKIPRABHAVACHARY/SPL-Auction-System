@@ -16,5 +16,9 @@ class Transaction(db.Model):
     franchise = db.relationship('Franchise')
     admin = db.relationship('User')
 
+    @property
+    def timestamp(self):
+        return self.created_at
+
     def __repr__(self):
         return f'<Transaction franchise_id={self.franchise_id} amount={self.amount} type={self.type}>'

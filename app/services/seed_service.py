@@ -71,11 +71,16 @@ def seed_database():
 
     # 3. Admin User
     admin_pass = os.environ.get('ADMIN_PASSWORD', 'SPLAdmin@2026!')
-    admin_user = User.query.filter((User.username == 'admin') | (User.email == 'admin@sphoorthyengg.ac.in')).first()
+    admin_email = os.environ.get('ADMIN_EMAIL', 'laxminivasmorishetty143@gmail.com')
+    admin_user = User.query.filter(
+        (User.username == 'admin') | 
+        (User.email == admin_email) | 
+        (User.email == 'admin@sphoorthyengg.ac.in')
+    ).first()
     if not admin_user:
         admin_user = User(
             username='admin',
-            email='admin@sphoorthyengg.ac.in',
+            email=admin_email,
             display_name='System Administrator',
             role='ADMIN',
             is_active=True
@@ -84,7 +89,7 @@ def seed_database():
         db.session.add(admin_user)
     else:
         admin_user.username = 'admin'
-        admin_user.email = 'admin@sphoorthyengg.ac.in'
+        admin_user.email = admin_email
         admin_user.role = 'ADMIN'
         admin_user.is_active = True
         if not admin_user.password_hash or not admin_user.check_password(admin_pass):
@@ -134,6 +139,52 @@ def seed_database():
             user.is_active = True
             if not user.password_hash or not user.check_password(item['default_pass']):
                 user.set_password(item['default_pass'])
+
+        # Enforce 3 Lakhs Starting Purse
+        franchise.starting_purse = DEFAULT_PURSE
+
+        # Enforce Mandatory Team Captain for every squad
+        from app.models.player import Player, PlayerRole, PlayerCategory, PlayerStatus
+        from app.services.team_service import add_team_captain
+
+        if not franchise.has_captain:
+            cap_name = f"{franchise.name} Captain"
+            cap_roll = f"CAP-{franchise.short_name}"
+            add_team_captain(
+                franchise=franchise,
+                name=cap_name,
+                rule_number=cap_roll,
+                department="Management",
+                year="Senior",
+                category="NORMAL",
+                photo="default_player.png"
+            )
+        else:
+            # Ensure existing captain has an official Player record in the squad
+            cap_name = franchise.captain_name or f"{franchise.name} Captain"
+            cap_roll = franchise.captain_rule_number or f"CAP-{franchise.short_name}"
+            add_team_captain(
+                franchise=franchise,
+                name=cap_name,
+                rule_number=cap_roll,
+                department=franchise.captain_department or "Management",
+                year=franchise.captain_year or "Senior",
+                category=franchise.captain_category or "NORMAL",
+                photo=franchise.captain_photo or "default_player.png"
+            )
+
+        franchise.recalculate_purse()
+
+    # Deduplicate any duplicate transactions for players
+    from app.models.transaction import Transaction
+    all_txs = Transaction.query.filter_by(type='PLAYER_PURCHASE').order_by(Transaction.id.asc()).all()
+    seen_purchases = set()
+    for tx in all_txs:
+        key = (tx.player_id, tx.franchise_id)
+        if key in seen_purchases:
+            db.session.delete(tx)
+        else:
+            seen_purchases.add(key)
 
     db.session.commit()
 

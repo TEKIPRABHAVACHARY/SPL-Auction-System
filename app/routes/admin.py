@@ -10,12 +10,12 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import User, Player, PlayerRole, PlayerCategory, PlayerStatus, Franchise, AuctionState, AuctionStatus, SystemSettings, AuditLog, Transaction, Bid, Fixture, FixtureStage, FixtureStatus
 from app.utils.decorators import admin_required
-from app.services.csv_service import parse_and_import_players_csv
+from app.services.csv_service import parse_and_import_players_csv, preview_players_csv
 from app.services.audit_service import log_audit
 from app.services.auction_service import validate_squads_integrity, confirm_and_lock_squads, unlock_squads_override
 from app.services.fixture_service import generate_fixtures, validate_fixtures, publish_fixtures, unpublish_fixtures
 from app.services.backup_service import create_database_backup, list_backups, restore_database_backup
-from app.services.health_service import check_system_health, run_deep_auction_check
+from app.services.health_service import run_deep_auction_check
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -45,7 +45,19 @@ def dashboard():
     total_capacity = sum(f.squad_limit for f in active_franchises) if active_franchises else 90
     total_purse = sum(f.starting_purse for f in active_franchises) if active_franchises else 3000000.0
 
-    recent_audit_events = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(8).all()
+    # Primary & Second Chance Operational Data
+    primary_available = Player.query.filter_by(status=PlayerStatus.AVAILABLE, auction_type='PRIMARY').count()
+    second_chance_eligible = Player.query.filter_by(status=PlayerStatus.UNSOLD, is_second_chance_eligible=True).count()
+    second_chance_sold = AuditLog.query.filter_by(action='SECOND_CHANCE_PLAYER_SOLD').count()
+    is_second_chance_active = SystemSettings.get_setting('second_chance_active') == 'true'
+
+    # Check if both Primary and Second Chance auctions are completed
+    sc_completed_setting = SystemSettings.get_setting('second_chance_completed') == 'true'
+    both_auctions_completed = (primary_available == 0 and (sc_completed_setting or (not is_second_chance_active and second_chance_eligible == 0)))
+
+    # Team eligibility counts
+    eligible_teams_count = sum(1 for f in active_franchises if f.is_eligible_for_bidding)
+    ineligible_teams_count = len(active_franchises) - eligible_teams_count
 
     return render_template(
         'admin/dashboard.html',
@@ -57,12 +69,18 @@ def dashboard():
         available_players=available_players,
         sold_players=sold_players,
         unsold_players=unsold_players,
+        primary_available=primary_available,
+        second_chance_eligible=second_chance_eligible,
+        second_chance_sold=second_chance_sold,
+        is_second_chance_active=is_second_chance_active,
+        both_auctions_completed=both_auctions_completed,
         total_franchises=len(all_franchises),
         active_franchises_count=len(active_franchises),
+        eligible_teams_count=eligible_teams_count,
+        ineligible_teams_count=ineligible_teams_count,
         total_capacity=total_capacity,
         total_purse=total_purse,
-        all_franchises=all_franchises,
-        recent_audit_events=recent_audit_events
+        all_franchises=all_franchises
     )
 
 # ==================== PLAYER MANAGEMENT ====================
@@ -93,6 +111,12 @@ def players():
 
     player_list = query.order_by(Player.id.desc()).all()
 
+    primary_available = Player.query.filter_by(status=PlayerStatus.AVAILABLE, auction_type='PRIMARY').count()
+    second_chance_eligible = Player.query.filter_by(status=PlayerStatus.UNSOLD, is_second_chance_eligible=True).count()
+    is_second_chance_active = SystemSettings.get_setting('second_chance_active') == 'true'
+    sc_completed_setting = SystemSettings.get_setting('second_chance_completed') == 'true'
+    both_auctions_completed = (primary_available == 0 and (sc_completed_setting or (not is_second_chance_active and second_chance_eligible == 0)))
+
     return render_template(
         'admin/players.html',
         players=player_list,
@@ -102,7 +126,8 @@ def players():
         search=search,
         selected_role=role_filter,
         selected_category=category_filter,
-        selected_status=status_filter
+        selected_status=status_filter,
+        both_auctions_completed=both_auctions_completed
     )
 
 @admin_bp.route('/players/add', methods=['POST'])
@@ -118,13 +143,14 @@ def add_player():
     category = request.form.get('category', '').strip().upper()
     base_price_str = request.form.get('base_price', '10000').strip()
     status = request.form.get('status', PlayerStatus.AVAILABLE).strip().upper()
+    room_number = request.form.get('room_number', '').strip()
 
     if not roll_number or not name:
-        flash('Roll number and Name are required.', 'danger')
+        flash('Rule Number and Name are required.', 'danger')
         return redirect(url_for('admin.players'))
 
-    if Player.query.filter_by(roll_number=roll_number).first():
-        flash(f'Player with roll number "{roll_number}" already exists.', 'danger')
+    if Player.query.filter((Player.roll_number == roll_number) | (Player.rule_number == roll_number)).first():
+        flash(f'Player with Rule Number "{roll_number}" already exists.', 'danger')
         return redirect(url_for('admin.players'))
 
     try:
@@ -151,14 +177,16 @@ def add_player():
         experience=experience,
         category=category if category in PlayerCategory.CHOICES else PlayerCategory.NORMAL,
         base_price=base_price,
-        status=status if status in PlayerStatus.CHOICES else PlayerStatus.AVAILABLE
+        status=status if status in PlayerStatus.CHOICES else PlayerStatus.AVAILABLE,
+        auction_type='PRIMARY',
+        room_number=room_number
     )
 
     db.session.add(player)
     db.session.commit()
 
     log_audit(current_user.id, 'ADD_PLAYER', 'Player', player.id, None, player.name)
-    flash(f'Player "{name}" added successfully.', 'success')
+    flash(f'Player "{name}" (Rule #{roll_number}) added successfully.', 'success')
     return redirect(url_for('admin.players'))
 
 @admin_bp.route('/players/<int:id>/edit', methods=['POST'])
@@ -168,7 +196,14 @@ def edit_player(id):
     player = Player.query.get_or_404(id)
     old_data = player.to_dict()
 
-    player.roll_number = (request.form.get('roll_number') or player.roll_number or '').strip()
+    new_rule = (request.form.get('roll_number') or request.form.get('rule_number') or player.roll_number or '').strip()
+    if new_rule != player.roll_number:
+        existing = Player.query.filter((Player.roll_number == new_rule) | (Player.rule_number == new_rule)).first()
+        if existing and existing.id != player.id:
+            flash(f'Rule Number "{new_rule}" already belongs to another player.', 'danger')
+            return redirect(url_for('admin.players'))
+        player.roll_number = new_rule
+
     player.name = (request.form.get('name') or player.name or '').strip()
     player.role = (request.form.get('role') or player.role or '').strip().upper()
     player.branch = (request.form.get('branch') or player.branch or '').strip()
@@ -176,6 +211,7 @@ def edit_player(id):
     player.experience = (request.form.get('experience') or player.experience or '').strip()
     player.category = (request.form.get('category') or player.category or '').strip().upper()
     player.status = (request.form.get('status') or player.status or '').strip().upper()
+    player.room_number = (request.form.get('room_number') or '').strip()
 
     try:
         player.base_price = float(request.form.get('base_price', player.base_price))
@@ -208,6 +244,18 @@ def delete_player(id):
     flash(f'Player "{name}" deleted successfully.', 'info')
     return redirect(url_for('admin.players'))
 
+@admin_bp.route('/players/preview-csv', methods=['POST'])
+@login_required
+@admin_required
+def preview_csv():
+    file = request.files.get('csv_file')
+    if not file or not file.filename:
+        return jsonify({'success': False, 'message': 'Please select a valid CSV file.'}), 400
+
+    content = file.read()
+    preview = preview_players_csv(content)
+    return jsonify({'success': True, 'preview': preview})
+
 @admin_bp.route('/players/import-csv', methods=['POST'])
 @login_required
 @admin_required
@@ -222,17 +270,11 @@ def import_csv():
 
     log_audit(
         current_user.id, 'IMPORT_PLAYERS_CSV', 'Player', None,
-        None, f"Imported: {import_result['imported']}, Skipped: {import_result['skipped']}"
+        None, f"Imported: {import_result['imported']}, Skipped: {import_result['skipped']}, Duplicates: {import_result['duplicates']}"
     )
 
-    return render_template(
-        'admin/players.html',
-        players=Player.query.order_by(Player.id.desc()).all(),
-        roles=PlayerRole.CHOICES,
-        categories=PlayerCategory.CHOICES,
-        statuses=PlayerStatus.CHOICES,
-        import_result=import_result
-    )
+    flash(f"CSV Import Summary: {import_result['imported']} Imported, {import_result['duplicates']} duplicates skipped, {import_result['skipped']} Skipped.", 'success' if import_result['imported'] > 0 else 'warning')
+    return redirect(url_for('admin.players'))
 
 @admin_bp.route('/players/<int:id>/json')
 @login_required
@@ -240,6 +282,16 @@ def import_csv():
 def get_player_json(id):
     player = Player.query.get_or_404(id)
     return jsonify(player.to_dict())
+
+@admin_bp.route('/players/by-rule/<rule_no>')
+@login_required
+@admin_required
+def get_player_by_rule(rule_no):
+    clean_rule = rule_no.strip()
+    player = Player.query.filter(Player.roll_number.ilike(clean_rule)).first()
+    if not player:
+        return jsonify({'success': False, 'message': f"Player with Rule Number '{rule_no}' not found."}), 404
+    return jsonify({'success': True, 'player': player.to_dict()})
 
 # ==================== FRANCHISE MANAGEMENT ====================
 
@@ -256,12 +308,19 @@ def franchises():
 def add_franchise():
     name = request.form.get('name', '').strip()
     short_name = request.form.get('short_name', '').strip().upper()
-    authorized_email = request.form.get('authorized_email', '').strip().lower()
+    authorized_email = request.form.get('authorized_email', '').strip().lower() or request.form.get('gmail', '').strip().lower() or request.form.get('email', '').strip().lower()
     owner_name = request.form.get('owner_name', '').strip()
     google_auth_enabled = 'google_auth_enabled' in request.form or request.form.get('google_auth_enabled') == 'true'
 
+    captain_rule_number = request.form.get('captain_rule_number', '').strip()
+    captain_name = request.form.get('captain_name', '').strip()
+    captain_department = request.form.get('captain_department', '').strip()
+    captain_year = request.form.get('captain_year', '').strip()
+    captain_category = request.form.get('captain_category', '').strip().upper()
+    captain_id = None
+
     if not name or not short_name:
-        flash('Franchise name and short name are required.', 'danger')
+        flash('Franchise name and short code are required.', 'danger')
         return redirect(url_for('admin.franchises'))
 
     if Franchise.query.filter_by(short_name=short_name).first():
@@ -271,14 +330,30 @@ def add_franchise():
     if authorized_email:
         existing_email = Franchise.query.filter_by(authorized_email=authorized_email).first()
         if existing_email:
-            flash('This Google account is already assigned to another franchise.', 'danger')
+            flash('This Gmail account is already assigned to another franchise.', 'danger')
             return redirect(url_for('admin.franchises'))
 
+    # Validate Captain Rule Number with Player data if provided
+    if captain_rule_number:
+        captain_player = Player.query.filter(Player.roll_number.ilike(captain_rule_number)).first()
+        if captain_player:
+            captain_id = captain_player.id
+            if not captain_name:
+                captain_name = captain_player.name
+            if not captain_department:
+                captain_department = captain_player.branch
+            if not captain_year:
+                captain_year = captain_player.year
+            if not captain_category:
+                captain_category = captain_player.category
+        else:
+            flash(f"Note: Captain rule number '{captain_rule_number}' was not found in registered player database.", 'warning')
+
     try:
-        starting_purse = float(request.form.get('starting_purse', 500000))
+        starting_purse = float(request.form.get('starting_purse', request.form.get('purse_amount', request.form.get('purse', 300000))))
         squad_limit = int(request.form.get('squad_limit', 15))
     except ValueError:
-        starting_purse = 500000.0
+        starting_purse = 300000.0
         squad_limit = 15
 
     logo_filename = 'default_logo.png'
@@ -287,6 +362,8 @@ def add_franchise():
         filename = secure_filename(f"logo_{short_name}_{file.filename}")
         file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
         logo_filename = filename
+    elif request.form.get('logo_url'):
+        logo_filename = request.form.get('logo_url').strip()
 
     franchise = Franchise(
         name=name,
@@ -298,14 +375,43 @@ def add_franchise():
         remaining_purse=starting_purse,
         squad_limit=squad_limit,
         logo=logo_filename,
+        captain_name=captain_name or None,
+        captain_rule_number=captain_rule_number or None,
+        captain_department=captain_department or None,
+        captain_year=captain_year or None,
+        captain_category=captain_category or None,
+        captain_id=captain_id,
         is_active=True
     )
 
     db.session.add(franchise)
     db.session.commit()
 
+    # Automatically provision User account for franchisee login via registered Gmail
+    if authorized_email:
+        f_user = User.query.filter_by(email=authorized_email).first()
+        if not f_user:
+            uname = f"{short_name.lower()}_owner"
+            if User.query.filter_by(username=uname).first():
+                uname = f"{short_name.lower()}_{franchise.id}"
+            f_user = User(
+                username=uname,
+                email=authorized_email,
+                display_name=owner_name or name,
+                role='FRANCHISE',
+                franchise_id=franchise.id,
+                is_active=True
+            )
+            f_user.set_password('SPL@2025')
+            db.session.add(f_user)
+            db.session.commit()
+        else:
+            f_user.franchise_id = franchise.id
+            f_user.role = 'FRANCHISE'
+            db.session.commit()
+
     log_audit(current_user.id, 'FRANCHISE_CREATED', 'Franchise', franchise.id, None, franchise.name, franchise_id=franchise.id)
-    flash(f'Franchise "{name}" created successfully.', 'success')
+    flash(f'Franchisee "{name}" created successfully. Registered Gmail "{authorized_email or "None"}" configured for login.', 'success')
     return redirect(url_for('admin.franchises'))
 
 @admin_bp.route('/franchises/<int:id>/edit', methods=['POST'])
@@ -313,25 +419,52 @@ def add_franchise():
 @admin_required
 def edit_franchise(id):
     franchise = Franchise.query.get_or_404(id)
-    old_name = franchise.name
-    old_email = franchise.authorized_email
-    old_owner = franchise.owner_name
+    old_data = franchise.to_dict()
 
     new_name = request.form.get('name', franchise.name).strip()
     new_short = request.form.get('short_name', franchise.short_name).strip().upper()
-    email_input = request.form.get('authorized_email', '').strip().lower()
+    email_input = (request.form.get('authorized_email') or request.form.get('gmail') or '').strip().lower()
     owner_name_input = request.form.get('owner_name', '').strip()
+
+    captain_rule_number = request.form.get('captain_rule_number', '').strip()
+    captain_name = request.form.get('captain_name', '').strip()
+    captain_department = request.form.get('captain_department', '').strip()
+    captain_year = request.form.get('captain_year', '').strip()
+    captain_category = request.form.get('captain_category', '').strip().upper()
 
     if email_input:
         existing_email = Franchise.query.filter_by(authorized_email=email_input).first()
         if existing_email and existing_email.id != franchise.id:
-            flash('This Google account is already assigned to another franchise.', 'danger')
+            flash('This Gmail account is already assigned to another franchise.', 'danger')
             return redirect(url_for('admin.franchises'))
+
+    # Validate Captain Rule Number with Player data if provided
+    captain_id = franchise.captain_id
+    if captain_rule_number:
+        captain_player = Player.query.filter(Player.roll_number.ilike(captain_rule_number)).first()
+        if captain_player:
+            captain_id = captain_player.id
+            if not captain_name:
+                captain_name = captain_player.name
+            if not captain_department:
+                captain_department = captain_player.branch
+            if not captain_year:
+                captain_year = captain_player.year
+            if not captain_category:
+                captain_category = captain_player.category
+        else:
+            flash(f"Note: Captain rule number '{captain_rule_number}' was not found in registered player database.", 'warning')
 
     franchise.name = new_name
     franchise.short_name = new_short
     franchise.authorized_email = email_input if email_input else None
     franchise.owner_name = owner_name_input if owner_name_input else None
+    franchise.captain_name = captain_name or None
+    franchise.captain_rule_number = captain_rule_number or None
+    franchise.captain_department = captain_department or None
+    franchise.captain_year = captain_year or None
+    franchise.captain_category = captain_category or None
+    franchise.captain_id = captain_id
     franchise.google_auth_enabled = 'google_auth_enabled' in request.form or request.form.get('google_auth_enabled') == 'true'
     franchise.is_active = 'is_active' in request.form or request.form.get('is_active') == 'true'
 
@@ -350,16 +483,57 @@ def edit_franchise(id):
         file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
         franchise.logo = filename
         log_audit(current_user.id, 'FRANCHISE_LOGO_UPLOADED', 'Franchise', franchise.id, None, filename, franchise_id=franchise.id)
+    elif request.form.get('logo_url'):
+        franchise.logo = request.form.get('logo_url').strip()
 
     db.session.commit()
 
+    # Sync User account
+    if email_input:
+        f_user = User.query.filter_by(email=email_input).first()
+        if not f_user:
+            uname = f"{new_short.lower()}_owner"
+            f_user = User(
+                username=uname,
+                email=email_input,
+                display_name=owner_name_input or new_name,
+                role='FRANCHISE',
+                franchise_id=franchise.id,
+                is_active=True
+            )
+            f_user.set_password('SPL@2025')
+            db.session.add(f_user)
+            db.session.commit()
+        else:
+            f_user.franchise_id = franchise.id
+            f_user.role = 'FRANCHISE'
+            f_user.is_active = franchise.is_active
+            db.session.commit()
+
     log_audit(
         current_user.id, 'FRANCHISE_UPDATED', 'Franchise', franchise.id,
-        f"Name: {old_name}, Email: {old_email}, Owner: {old_owner}",
-        f"Name: {franchise.name}, Email: {franchise.authorized_email}, Owner: {franchise.owner_name}",
+        str(old_data), str(franchise.to_dict()),
         franchise_id=franchise.id
     )
-    flash(f'Franchise "{franchise.name}" updated successfully.', 'success')
+    flash(f'Franchisee "{franchise.name}" updated successfully.', 'success')
+    return redirect(url_for('admin.franchises'))
+
+@admin_bp.route('/franchises/<int:id>/toggle-status', methods=['POST'])
+@login_required
+@admin_required
+def toggle_franchise_status(id):
+    franchise = Franchise.query.get_or_404(id)
+    franchise.is_active = not franchise.is_active
+
+    # Sync associated user accounts
+    users = User.query.filter_by(franchise_id=franchise.id).all()
+    for u in users:
+        u.is_active = franchise.is_active
+
+    db.session.commit()
+    status_str = 'ACTIVE (Login Enabled)' if franchise.is_active else 'DISABLED (Login Blocked)'
+    log_audit(current_user.id, 'FRANCHISE_STATUS_TOGGLED', 'Franchise', franchise.id, None, status_str, franchise_id=franchise.id)
+    flash(f'Franchisee "{franchise.name}" status updated: {status_str}.', 'success')
     return redirect(url_for('admin.franchises'))
 
 @admin_bp.route('/franchises/<int:id>/remove-logo', methods=['POST'])
@@ -413,6 +587,82 @@ def inspect_franchise(id):
         role_counts=role_counts
     )
 
+@admin_bp.route('/franchises/<int:id>/add-captain', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_captain(id):
+    franchise = Franchise.query.get_or_404(id)
+    name = request.form.get('captain_name', '').strip()
+    rule_number = request.form.get('captain_rule_number', '').strip() or request.form.get('captain_roll_number', '').strip()
+    department = request.form.get('captain_department', '').strip() or request.form.get('captain_branch', '').strip()
+    year = request.form.get('captain_year', '').strip()
+    category = request.form.get('captain_category', 'NORMAL').strip().upper()
+
+    photo_fname = None
+    if 'captain_photo' in request.files:
+        photo_file = request.files.get('captain_photo')
+        if photo_file and photo_file.filename and allowed_file(photo_file.filename):
+            photo_fname = secure_filename(f"captain_{franchise.short_name}_{photo_file.filename}")
+            photo_file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], photo_fname))
+
+    from app.services.team_service import add_team_captain
+    try:
+        add_team_captain(
+            franchise=franchise,
+            name=name,
+            rule_number=rule_number,
+            department=department,
+            year=year,
+            category=category,
+            photo=photo_fname,
+            actor_id=current_user.id
+        )
+        flash(f'✓ Team Captain "{name}" added successfully for {franchise.name}! Team is now ELIGIBLE FOR BIDDING.', 'success')
+    except ValueError as e:
+        flash(str(e), 'danger')
+
+    next_url = request.form.get('next') or request.referrer or url_for('admin.franchises')
+    return redirect(next_url)
+
+@admin_bp.route('/franchises/<int:id>/add-member', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_member(id):
+    franchise = Franchise.query.get_or_404(id)
+    name = request.form.get('name', '').strip()
+    rule_number = request.form.get('rule_number', '').strip() or request.form.get('roll_number', '').strip()
+    department = request.form.get('branch', '').strip() or request.form.get('department', '').strip()
+    year = request.form.get('year', '').strip()
+    role = request.form.get('role', 'BATSMAN').strip().upper()
+    category = request.form.get('category', 'NORMAL').strip().upper()
+
+    photo_fname = None
+    if 'photo' in request.files:
+        photo_file = request.files.get('photo')
+        if photo_file and photo_file.filename and allowed_file(photo_file.filename):
+            photo_fname = secure_filename(f"member_{franchise.short_name}_{photo_file.filename}")
+            photo_file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], photo_fname))
+
+    from app.services.team_service import add_team_member
+    try:
+        player = add_team_member(
+            franchise=franchise,
+            name=name,
+            rule_number=rule_number,
+            department=department,
+            year=year,
+            role=role,
+            category=category,
+            photo=photo_fname,
+            actor_id=current_user.id
+        )
+        flash(f'Member "{player.name}" added to {franchise.name} ({franchise.squad_count}/{franchise.squad_limit} Members).', 'success')
+    except ValueError as e:
+        flash(str(e), 'danger')
+
+    next_url = request.form.get('next') or request.referrer or url_for('admin.inspect_franchise', id=franchise.id)
+    return redirect(next_url)
+
 # ==================== ADMIN AUDIT LOG PLATFORM ====================
 
 @admin_bp.route('/audit-logs', methods=['GET'])
@@ -421,11 +671,14 @@ def inspect_franchise(id):
 def audit_logs():
     search = request.args.get('search', '').strip()
     action_filter = request.args.get('action', '').strip()
+    category_filter = request.args.get('category', '').strip().upper()
     status_filter = request.args.get('status', '').strip()
     franchise_filter = request.args.get('franchise_id', '').strip()
     user_filter = request.args.get('user_id', '').strip()
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 25
 
     query = AuditLog.query
 
@@ -434,8 +687,12 @@ def audit_logs():
             (AuditLog.action.ilike(f'%{search}%')) |
             (AuditLog.old_value.ilike(f'%{search}%')) |
             (AuditLog.new_value.ilike(f'%{search}%')) |
-            (AuditLog.ip_address.ilike(f'%{search}%'))
+            (AuditLog.ip_address.ilike(f'%{search}%')) |
+            (AuditLog.user_email.ilike(f'%{search}%'))
         )
+
+    if category_filter:
+        query = query.filter(AuditLog.category == category_filter)
 
     if action_filter:
         query = query.filter(AuditLog.action == action_filter)
@@ -464,6 +721,13 @@ def audit_logs():
             pass
 
     logs_list = query.order_by(AuditLog.created_at.desc()).all()
+    total_matched = len(logs_list)
+    total_pages = max(1, (total_matched + per_page - 1) // per_page)
+    if page < 1:
+        page = 1
+    elif page > total_pages:
+        page = total_pages
+    paginated_logs = logs_list[(page - 1) * per_page : page * per_page]
 
     all_logs = AuditLog.query.all()
     total_events = len(all_logs)
@@ -483,10 +747,10 @@ def audit_logs():
         'USER_DISABLED', 'SECURITY_ALERT'
     }
 
-    login_events = sum(1 for log in all_logs if log.action in login_actions)
-    auction_events = sum(1 for log in all_logs if log.action in auction_actions)
+    login_events = sum(1 for log in all_logs if log.action in login_actions or getattr(log, 'category', '') == 'AUTH')
+    auction_events = sum(1 for log in all_logs if log.action in auction_actions or getattr(log, 'category', '') == 'AUCTION')
     admin_actions_count = sum(1 for log in all_logs if log.admin_id is not None)
-    security_events = sum(1 for log in all_logs if log.action in security_actions or log.status in ['FAILED', 'DENIED'])
+    security_events = sum(1 for log in all_logs if log.action in security_actions or getattr(log, 'category', '') == 'SECURITY' or log.status in ['FAILED', 'DENIED'])
 
     franchises = Franchise.query.order_by(Franchise.name.asc()).all()
     users = User.query.order_by(User.username.asc()).all()
@@ -496,7 +760,11 @@ def audit_logs():
 
     return render_template(
         'admin/audit_logs.html',
-        logs=logs_list,
+        logs=paginated_logs,
+        page=page,
+        total_pages=total_pages,
+        total_matched=total_matched,
+        per_page=per_page,
         total_events=total_events,
         login_events=login_events,
         auction_events=auction_events,
@@ -506,6 +774,7 @@ def audit_logs():
         users=users,
         action_options=action_options,
         search=search,
+        selected_category=category_filter,
         selected_action=action_filter,
         selected_status=status_filter,
         selected_franchise=franchise_filter,
@@ -520,17 +789,21 @@ def audit_logs():
 @login_required
 @admin_required
 def settings():
-    franchises = Franchise.query.order_by(Franchise.id.asc()).all()
-
     if request.method == 'POST':
         event_name = request.form.get('event_name', 'SPL').strip()
         event_subtitle = request.form.get('event_subtitle', 'Sphoorthy Premier League').strip()
-        starting_purse = request.form.get('starting_purse', '500000').strip()
+        starting_purse = request.form.get('starting_purse', '300000').strip()
         squad_limit = request.form.get('squad_limit', '15').strip()
         base_price = request.form.get('base_price', '10000').strip()
         timer_seconds = request.form.get('timer_seconds', '30').strip()
         theme_default = request.form.get('theme_default', 'dark').strip()
         show_price_public = 'true' if 'show_purchase_price_publicly' in request.form or request.form.get('show_purchase_price_publicly') == 'true' else 'false'
+
+        # Global Audit Settings
+        audit_logging_enabled = 'true' if 'audit_logging_enabled' in request.form or request.form.get('audit_logging_enabled') == 'true' else 'false'
+        audit_retention_days = request.form.get('audit_retention_days', '90').strip()
+        audit_log_level = request.form.get('audit_log_level', 'ALL').strip().upper()
+        audit_track_ip = 'true' if 'audit_track_ip' in request.form or request.form.get('audit_track_ip') == 'true' else 'false'
 
         SystemSettings.set_setting('event_name', event_name)
         SystemSettings.set_setting('event_subtitle', event_subtitle)
@@ -540,34 +813,29 @@ def settings():
         SystemSettings.set_setting('timer_seconds', timer_seconds)
         SystemSettings.set_setting('theme_default', theme_default)
         SystemSettings.set_setting('SHOW_PURCHASE_PRICE_PUBLICLY', show_price_public)
+        SystemSettings.set_setting('audit_logging_enabled', audit_logging_enabled)
+        SystemSettings.set_setting('audit_retention_days', audit_retention_days)
+        SystemSettings.set_setting('audit_log_level', audit_log_level)
+        SystemSettings.set_setting('audit_track_ip', audit_track_ip)
 
-        # Process Captain & Vice-Captain assignments
-        for f in franchises:
-            cap_val = request.form.get(f'captain_{f.id}')
-            vc_val = request.form.get(f'vice_captain_{f.id}')
-            f.captain_id = int(cap_val) if cap_val and cap_val.isdigit() else None
-            f.vice_captain_id = int(vc_val) if vc_val and vc_val.isdigit() else None
-
-        db.session.commit()
-
-        log_audit(current_user.id, 'UPDATE_SETTINGS', 'SystemSettings', None, None, f"Event: {event_name}")
-        flash('System settings saved successfully.', 'success')
+        log_audit(current_user.id, 'UPDATE_SETTINGS', 'SystemSettings', None, None, f"Event: {event_name}, Audit: {audit_log_level}")
+        flash('System configuration and Global Audit settings saved successfully.', 'success')
         return redirect(url_for('admin.settings'))
-
-    audit_logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(20).all()
 
     return render_template(
         'admin/settings.html',
         event_name=SystemSettings.get_setting('event_name', 'SPL'),
         event_subtitle=SystemSettings.get_setting('event_subtitle', 'Sphoorthy Premier League'),
-        starting_purse=SystemSettings.get_setting('starting_purse', '500000'),
+        starting_purse=SystemSettings.get_setting('starting_purse', '300000'),
         squad_limit=SystemSettings.get_setting('squad_limit', '15'),
         base_price=SystemSettings.get_setting('base_price', '10000'),
-        timer_seconds=SystemSettings.get_setting('timer_seconds', '30'),
+        timer_seconds=SystemSettings.get_setting('timer_seconds', '10'),
         theme_default=SystemSettings.get_setting('theme_default', 'dark'),
         show_purchase_price_publicly=SystemSettings.get_setting('SHOW_PURCHASE_PRICE_PUBLICLY', 'true'),
-        franchises=franchises,
-        audit_logs=audit_logs
+        audit_logging_enabled=SystemSettings.get_setting('audit_logging_enabled', 'true'),
+        audit_retention_days=SystemSettings.get_setting('audit_retention_days', '90'),
+        audit_log_level=SystemSettings.get_setting('audit_log_level', 'ALL'),
+        audit_track_ip=SystemSettings.get_setting('audit_track_ip', 'true')
     )
 
 # ==================== LIVE AUCTION CONTROL ====================
@@ -576,7 +844,9 @@ def settings():
 @login_required
 @admin_required
 def auction_control():
-    return render_template('admin/auction.html')
+    franchises = Franchise.query.filter_by(is_active=True).order_by(Franchise.id.asc()).all()
+    available_players = Player.query.filter(Player.status == PlayerStatus.AVAILABLE, Player.sold_to == None).order_by(Player.roll_number.asc()).all()
+    return render_template('admin/auction.html', franchises=franchises, available_players=available_players)
 
 # ==================== PHASE 6 MODULES ====================
 
@@ -659,19 +929,33 @@ def bulk_unsold_eligibility():
 @admin_required
 def second_chance_dashboard():
     total_unsold = Player.query.filter(Player.status.in_([PlayerStatus.UNSOLD, PlayerStatus.FINAL_UNSOLD])).count()
-    eligible_unsold = Player.query.filter_by(status=PlayerStatus.UNSOLD, is_second_chance_eligible=True).count()
-
-    # Second chance sold count from transactions/audits
+    eligible_unsold = Player.query.filter(Player.status == PlayerStatus.UNSOLD, Player.sold_to == None, Player.is_second_chance_eligible == True).count()
     second_chance_sold = AuditLog.query.filter_by(action='SECOND_CHANCE_PLAYER_SOLD').count()
     is_active = SystemSettings.get_setting('second_chance_active') == 'true'
+    eligible_players = Player.query.filter(Player.status == PlayerStatus.UNSOLD, Player.sold_to == None, Player.is_second_chance_eligible == True).order_by(Player.roll_number.asc()).all()
+    franchises = Franchise.query.order_by(Franchise.name.asc()).all()
+
+    sc_completed = SystemSettings.get_setting('second_chance_completed') == 'true'
 
     return render_template(
         'admin/second_chance.html',
         total_unsold=total_unsold,
         eligible_unsold=eligible_unsold,
         second_chance_sold=second_chance_sold,
-        is_active=is_active
+        is_active=is_active,
+        sc_completed=sc_completed,
+        eligible_players=eligible_players,
+        franchises=franchises
     )
+
+@admin_bp.route('/second-chance/complete', methods=['POST'])
+@login_required
+@admin_required
+def complete_second_chance():
+    SystemSettings.set_setting('second_chance_completed', 'true')
+    log_audit(current_user.id, 'COMPLETE_SECOND_CHANCE', 'Auction', None, None, 'Second chance auction marked as completed')
+    flash('Second Chance Auction marked as Completed. Post-Auction Player Addition is now unlocked!', 'success')
+    return redirect(url_for('admin.players', post_auction=1))
 
 # 3. FINAL SQUAD VERIFICATION & LOCKING
 @admin_bp.route('/final-squads', methods=['GET'])
@@ -683,7 +967,8 @@ def final_squads():
     # Build franchise breakdown with details
     squad_data = []
     for f in franchises:
-        players = Player.query.filter_by(sold_to=f.id).order_by(Player.name.asc()).all()
+        f.recalculate_purse()
+        players = f.squad_players
         squad_data.append({
             'franchise': f,
             'players': players,
@@ -892,6 +1177,9 @@ def auction_summary():
     lowest_purchase = min(all_prices) if all_prices else 0.0
     total_money_spent = sum(all_prices)
 
+    transactions = Transaction.query.order_by(Transaction.created_at.desc()).all()
+    sold_players = Player.query.filter_by(status=PlayerStatus.SOLD).order_by(Player.id.desc()).all()
+
     return render_template(
         'admin/auction_summary.html',
         total_registered=total_registered,
@@ -902,7 +1190,9 @@ def auction_summary():
         franchise_summaries=franchise_summaries,
         highest_purchase=highest_purchase,
         lowest_purchase=lowest_purchase,
-        total_money_spent=total_money_spent
+        total_money_spent=total_money_spent,
+        transactions=transactions,
+        sold_players=sold_players
     )
 
 @admin_bp.route('/auction-summary/download', methods=['GET'])
@@ -917,11 +1207,17 @@ def download_auction_report():
 
     for p in players:
         franchise_name = p.franchise.name if p.franchise else '---'
-        sold_price_str = f"Rs. {p.sold_price:,.0f}" if p.sold_price is not None else 'N/A'
+        if p.is_captain:
+            role_str = f"{p.role} (CAPTAIN)"
+            sold_price_str = "-"
+        else:
+            role_str = p.role
+            sold_price_str = f"Rs. {p.sold_price:,.0f}" if p.sold_price is not None else 'N/A'
+
         writer.writerow([
             p.roll_number,
             p.name,
-            p.role,
+            role_str,
             p.category,
             f"Rs. {p.base_price:,.0f}",
             p.status,
@@ -1074,20 +1370,6 @@ def auction_integrity_audit():
         report=report
     )
 
-# 4. SYSTEM HEALTH DASHBOARD
-@admin_bp.route('/system/health', methods=['GET'])
-@login_required
-@admin_required
-def system_health_dashboard():
-    health = check_system_health()
-    auction_state = AuctionState.query.first()
-    status = auction_state.status if auction_state else AuctionStatus.WAITING
-
-    return render_template(
-        'admin/system_health.html',
-        health=health,
-        auction_status=status
-    )
 
 # 5. EVENT CONTROL PANEL
 @admin_bp.route('/event-control', methods=['GET'])

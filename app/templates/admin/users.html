@@ -1,78 +1,148 @@
-{% extends "base.html" %}
+{% extends "admin/base_admin.html" %}
+{% set active_page = 'users' %}
 
-{% block title %}User Account Management — {{ event_name }}{% endblock %}
+{% block title %}Users & Security — {{ event_name }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
     <div>
-        <h2 class="fw-bold text-cyan mb-1"><i class="fa-solid fa-users-gear me-2"></i>User & Franchise Credentials</h2>
-        <p class="text-muted small mb-0">Manage system login accounts, role assignments, and password resets.</p>
+        <h2 class="fw-bold text-cyan mb-1"><i class="fa-solid fa-user-shield me-2"></i>Users & Security</h2>
+        <p class="text-muted small mb-0">Role-based access control, registered Gmail credentials, session management, and account status.</p>
     </div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-spl-primary fw-bold" data-bs-toggle="modal" data-bs-target="#createUserModal">
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-spl-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#createUserModal">
             <i class="fa-solid fa-user-plus me-1"></i>Create User Account
         </button>
-        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
-            <i class="fa-solid fa-arrow-left me-1"></i>Dashboard
+        <a href="{{ url_for('admin.audit_logs') }}?category=AUTH" class="btn btn-outline-secondary btn-sm fw-bold">
+            <i class="fa-solid fa-shield-halved me-1"></i>Security Logs
         </a>
     </div>
 </div>
 
-<div class="spl-card">
+<!-- Stats Metric Row -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="spl-card text-center py-3 border-start border-cyan border-4">
+            <span class="text-muted text-uppercase extra-small fw-bold">Total Accounts</span>
+            <h3 class="fw-bold text-white mb-0 mt-1">{{ users | length }}</h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="spl-card text-center py-3 border-start border-success border-4">
+            <span class="text-muted text-uppercase extra-small fw-bold">Active Accounts</span>
+            <h3 class="fw-bold text-success mb-0 mt-1">
+                {{ users | selectattr('is_active') | list | length }}
+            </h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="spl-card text-center py-3 border-start border-warning border-4">
+            <span class="text-muted text-uppercase extra-small fw-bold">Franchise Logins</span>
+            <h3 class="fw-bold text-warning mb-0 mt-1">
+                {{ users | selectattr('role', 'equalto', 'FRANCHISE') | list | length }}
+            </h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="spl-card text-center py-3 border-start border-danger border-4">
+            <span class="text-muted text-uppercase extra-small fw-bold">Admin Accounts</span>
+            <h3 class="fw-bold text-danger mb-0 mt-1">
+                {{ users | selectattr('role', 'equalto', 'ADMIN') | list | length }}
+            </h3>
+        </div>
+    </div>
+</div>
+
+<!-- Users & Credentials Table -->
+<div class="spl-card p-0 overflow-hidden">
+    <div class="p-3 bg-dark border-bottom border-secondary d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <div>
+            <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-users-gear text-cyan me-2"></i>System User Accounts</h5>
+            <small class="text-muted">Franchisees log in using their registered Gmail address</small>
+        </div>
+        <div>
+            <input type="text" id="users-search-input" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Filter users, Gmail, role...">
+        </div>
+    </div>
+
     <div class="table-responsive">
-        <table class="table table-dark table-hover align-middle mb-0">
-            <thead class="border-bottom border-secondary text-cyan">
+        <table class="table table-dark table-hover align-middle mb-0" id="users-table">
+            <thead class="text-cyan small text-uppercase bg-black bg-opacity-30">
                 <tr>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Franchise Assignment</th>
-                    <th>Status</th>
-                    <th>Last Login</th>
-                    <th class="text-end">Actions</th>
+                    <th class="ps-3 py-3">User</th>
+                    <th class="py-3">Registered Gmail</th>
+                    <th class="py-3">Role</th>
+                    <th class="py-3">Assigned Franchise</th>
+                    <th class="py-3">Status</th>
+                    <th class="py-3">Last Login</th>
+                    <th class="py-3 text-end pe-3">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for u in users %}
-                <tr>
-                    <td class="fw-bold text-light"><i class="fa-solid fa-user me-2 text-cyan"></i>{{ u.username }}</td>
-                    <td class="small text-muted">{{ u.email }}</td>
-                    <td>
-                        {% if u.is_admin %}
-                            <span class="badge bg-danger"><i class="fa-solid fa-user-shield me-1"></i>ADMIN</span>
+                <tr class="user-row">
+                    <td class="ps-3 py-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-dark border border-secondary text-cyan d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px;">
+                                {{ u.username[0]|upper }}
+                            </div>
+                            <div>
+                                <span class="fw-bold text-white d-block">{{ u.display_name or u.username }}</span>
+                                <small class="text-muted font-monospace">@{{ u.username }}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3">
+                        <span class="text-info font-monospace small"><i class="fa-solid fa-envelope me-1 text-muted"></i>{{ u.email or '-' }}</span>
+                    </td>
+                    <td class="py-3">
+                        {% if u.role == 'ADMIN' or u.is_admin %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-user-shield me-1"></i>ADMIN</span>
+                        {% elif u.role == 'FRANCHISE' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning"><i class="fa-solid fa-shield-halved me-1"></i>FRANCHISE</span>
                         {% else %}
-                            <span class="badge bg-info text-dark"><i class="fa-solid fa-shield-halved me-1"></i>FRANCHISE</span>
+                            <span class="badge bg-secondary"><i class="fa-solid fa-user me-1"></i>GUEST</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="py-3">
                         {% if u.franchise %}
-                            <span class="badge bg-dark border border-secondary text-cyan">{{ u.franchise.name }} ({{ u.franchise.short_name }})</span>
+                            <span class="badge bg-dark border border-secondary text-warning">
+                                <i class="fa-solid fa-shield-halved me-1"></i>{{ u.franchise.name }} ({{ u.franchise.short_name }})
+                            </span>
                         {% else %}
-                            <span class="text-muted small">---</span>
+                            <span class="text-muted small">—</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="py-3">
                         {% if u.is_active %}
-                            <span class="badge bg-success">ACTIVE</span>
+                            <span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-circle-check me-1"></i>ACTIVE</span>
                         {% else %}
-                            <span class="badge bg-secondary">INACTIVE</span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-circle-xmark me-1"></i>DISABLED</span>
                         {% endif %}
                     </td>
-                    <td class="small text-muted">
-                        {{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else 'Never' }}
+                    <td class="py-3 small text-muted">
+                        {% if u.last_login_at %}
+                            <i class="fa-regular fa-clock me-1 text-cyan"></i>{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                            <span class="text-muted italic">Never</span>
+                        {% endif %}
                     </td>
-                    <td class="text-end">
+                    <td class="py-3 text-end pe-3">
                         <div class="d-inline-flex gap-1">
-                            <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#resetPassModal{{ u.id }}">
-                                <i class="fa-solid fa-key me-1"></i>Reset Password
+                            <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#resetPassModal{{ u.id }}" title="Reset Password / Credentials">
+                                <i class="fa-solid fa-key me-1"></i>Reset
                             </button>
                             {% if u.id != current_user.id %}
                             <form method="POST" action="{{ url_for('admin.toggle_user_status', id=u.id) }}" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 {% if u.is_active %}
-                                <button type="submit" class="btn btn-outline-danger btn-sm">Disable</button>
+                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Disable Account">
+                                    <i class="fa-solid fa-user-slash me-1"></i>Disable
+                                </button>
                                 {% else %}
-                                <button type="submit" class="btn btn-outline-success btn-sm">Enable</button>
+                                <button type="submit" class="btn btn-outline-success btn-sm" title="Enable Account">
+                                    <i class="fa-solid fa-user-check me-1"></i>Enable
+                                </button>
                                 {% endif %}
                             </form>
                             {% endif %}
@@ -85,18 +155,19 @@
                                     <form method="POST" action="{{ url_for('admin.reset_user_password', id=u.id) }}">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <div class="modal-header border-secondary">
-                                            <h5 class="modal-title fw-bold text-cyan"><i class="fa-solid fa-key me-2"></i>Reset Password for '{{ u.username }}'</h5>
+                                            <h5 class="modal-title fw-bold text-warning"><i class="fa-solid fa-key me-2"></i>Reset Credentials: {{ u.username }}</h5>
                                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                         </div>
                                         <div class="modal-body text-start">
                                             <div class="mb-3">
                                                 <label for="reset_pass_{{ u.id }}" class="form-label text-cyan small fw-bold">New Password</label>
-                                                <input type="password" name="new_password" id="reset_pass_{{ u.id }}" class="form-control bg-dark text-light border-secondary" placeholder="Enter new password" required>
+                                                <input type="password" name="new_password" id="reset_pass_{{ u.id }}" class="form-control bg-dark text-light border-secondary" placeholder="Enter new password (min 6 characters)" required minlength="6">
                                             </div>
+                                            <p class="extra-small text-muted mb-0">The user or franchise can log in using their registered Gmail or this updated password.</p>
                                         </div>
                                         <div class="modal-footer border-secondary">
                                             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <button type="submit" class="btn btn-warning fw-bold">Reset Password</button>
+                                            <button type="submit" class="btn btn-warning fw-bold">Update Credentials</button>
                                         </div>
                                     </form>
                                 </div>
@@ -117,27 +188,29 @@
             <form method="POST" action="{{ url_for('admin.create_user') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold text-cyan"><i class="fa-solid fa-user-plus me-2"></i>Create New User Account</h5>
+                    <h5 class="modal-title fw-bold text-cyan"><i class="fa-solid fa-user-plus me-2"></i>Create User Account</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-start">
                     <div class="mb-3">
                         <label for="create_username" class="form-label text-cyan small fw-bold">Username</label>
-                        <input type="text" name="username" id="create_username" class="form-control bg-dark text-light border-secondary" placeholder="e.g. cybervipers" required>
+                        <input type="text" name="username" id="create_username" class="form-control bg-dark text-light border-secondary font-monospace" placeholder="e.g. thunderbolts_owner" required>
                     </div>
                     <div class="mb-3">
-                        <label for="create_email" class="form-label text-cyan small fw-bold">Email Address</label>
-                        <input type="email" name="email" id="create_email" class="form-control bg-dark text-light border-secondary" placeholder="owner@sphoorthyengg.ac.in">
+                        <label for="create_email" class="form-label text-cyan small fw-bold">Registered Gmail Address</label>
+                        <input type="email" name="email" id="create_email" class="form-control bg-dark text-light border-secondary" placeholder="owner@gmail.com" required>
+                        <div class="form-text text-muted extra-small">Franchisees log in directly using this registered Gmail.</div>
                     </div>
                     <div class="mb-3">
                         <label for="create_password" class="form-label text-cyan small fw-bold">Password</label>
-                        <input type="password" name="password" id="create_password" class="form-control bg-dark text-light border-secondary" placeholder="Initial password" required>
+                        <input type="password" name="password" id="create_password" class="form-control bg-dark text-light border-secondary" placeholder="Initial password" required minlength="6">
                     </div>
                     <div class="mb-3">
-                        <label for="create_role" class="form-label text-cyan small fw-bold">User Role</label>
+                        <label for="create_role" class="form-label text-cyan small fw-bold">Role</label>
                         <select name="role" id="create_role" class="form-select bg-dark text-light border-secondary">
-                            <option value="FRANCHISE" selected>FRANCHISE</option>
-                            <option value="ADMIN">ADMIN</option>
+                            <option value="FRANCHISE" selected>FRANCHISE (Franchise Owner / Representative)</option>
+                            <option value="ADMIN">ADMIN (Full Administrative Control)</option>
+                            <option value="GUEST">GUEST (Read-Only Live Viewer)</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -152,10 +225,27 @@
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-spl-primary fw-bold">Create User</button>
+                    <button type="submit" class="btn btn-spl-primary fw-bold">Create Account</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('users-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase().trim();
+            document.querySelectorAll('.user-row').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+        });
+    }
+});
+</script>
 {% endblock %}
